@@ -579,14 +579,23 @@ export default function OrderForm() {
           <DialogHeader>
             <DialogTitle>Skicka till montör</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            E-postfunktion kommer snart. Montör: <strong>{selectedTeam?.name ?? '—'}</strong>.
-            Ladda ner PDF istället?
-          </p>
+          <div className="space-y-2 text-sm">
+            <p>Ordern skickas via e-post till:</p>
+            <p className="font-semibold">{selectedTeam?.name} — {selectedTeam?.email}</p>
+            <p className="text-muted-foreground">
+              Bifogat: PDF + {images.length} bild{images.length !== 1 ? 'er' : ''}
+            </p>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendDialog(false)}>Avbryt</Button>
-            <Button onClick={() => { setShowSendDialog(false); downloadPDF(); }}>
-              <Download className="h-4 w-4 mr-1" /> Ladda ner PDF
+            <Button variant="outline" onClick={() => setShowSendDialog(false)} disabled={isSending}>
+              Avbryt
+            </Button>
+            <Button onClick={confirmSendEmail} disabled={isSending} style={{ backgroundColor: '#F97316' }}>
+              {isSending ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Skickar...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-1" /> Skicka</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
