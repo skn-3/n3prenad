@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { OrderLine, FacadeType } from '@/types/order';
-import { defaultTeams } from '@/data/teams';
+import { useTeams } from '@/components/TeamManager';
 import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
