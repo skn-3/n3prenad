@@ -27,6 +27,42 @@ interface UploadedImage {
   id: string;
   file: File;
   preview: string;
+  compressedSize: number; // bytes
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function compressImage(file: File, maxWidth = 1200, quality = 0.75): Promise<{ blob: Blob; preview: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error('Compression failed'));
+          const preview = URL.createObjectURL(blob);
+          resolve({ blob, preview });
+        },
+        'image/jpeg',
+        quality,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+    img.src = url;
+  });
 }
 
 export default function OrderForm() {
@@ -88,6 +124,13 @@ export default function OrderForm() {
   const totalUnits = windowCount + doorCount;
   const selectedTeam = teams.find(t => t.id === teamId);
 
+  // Estimate PDF ~200KB + all image sizes
+  const estimatedPdfSize = 200 * 1024;
+  const totalImageSize = images.reduce((s, img) => s + img.compressedSize, 0);
+  const totalAttachmentSize = estimatedPdfSize + totalImageSize;
+  const totalAttachmentMB = totalAttachmentSize / (1024 * 1024);
+  const attachmentsTooLarge = totalAttachmentMB > 10;
+  const attachmentsWarning = totalAttachmentMB > 8;
   const setAllUnits = (productId: string) => {
     setAccessoryQuantities(prev => ({ ...prev, [productId]: totalUnits }));
   };
@@ -118,15 +161,30 @@ export default function OrderForm() {
   };
 
   // Image handling
-  const addImages = useCallback((files: FileList | File[]) => {
-    const newImages: UploadedImage[] = Array.from(files)
-      .filter(f => f.type.startsWith('image/'))
-      .map(file => ({
-        id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        file,
-        preview: URL.createObjectURL(file),
-      }));
-    setImages(prev => [...prev, ...newImages]);
+  const addImages = useCallback(async (files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const compressed: UploadedImage[] = [];
+    for (const file of imageFiles) {
+      try {
+        const { blob, preview } = await compressImage(file);
+        const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+        compressed.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: compressedFile,
+          preview,
+          compressedSize: blob.size,
+        });
+      } catch {
+        // fallback: use original
+        compressed.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          preview: URL.createObjectURL(file),
+          compressedSize: file.size,
+        });
+      }
+    }
+    setImages(prev => [...prev, ...compressed]);
   }, []);
 
   const removeImage = (id: string) => {
@@ -626,10 +684,27 @@ export default function OrderForm() {
                     <X className="h-3.5 w-3.5" />
                   </button>
                   <p className="text-[10px] text-muted-foreground truncate mt-1">{img.file.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatBytes(img.compressedSize)}</p>
                 </div>
               ))}
             </div>
           )}
+          {/* Total size info */}
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Totalt: {totalAttachmentMB.toFixed(1)} MB av max 10 MB
+            </p>
+            {attachmentsTooLarge && (
+              <p className="text-xs font-medium" style={{ color: '#EF4444' }}>
+                🚫 Bilagorna är för stora ({totalAttachmentMB.toFixed(1)} MB). Ta bort bilder innan du skickar.
+              </p>
+            )}
+            {attachmentsWarning && !attachmentsTooLarge && (
+              <p className="text-xs font-medium" style={{ color: '#F97316' }}>
+                ⚠ Bilagorna är stora ({totalAttachmentMB.toFixed(1)} MB). Mailet kan misslyckas om det överstiger 10 MB. Överväg att ta bort några bilder.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -653,7 +728,9 @@ export default function OrderForm() {
               size="lg"
               onClick={handleSendToMontör}
               className="gap-2"
-              style={{ backgroundColor: '#F97316' }}
+              style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
+              disabled={attachmentsTooLarge}
+              title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
             >
               <Send className="h-5 w-5" /> Skicka till montör
             </Button>
