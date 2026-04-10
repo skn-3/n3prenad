@@ -5,6 +5,22 @@ const corsHeaders = {
 
 const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
 
+function cleanBase64(b64: string): string {
+  if (!b64) return ''
+  let cleaned = b64.trim()
+  if (cleaned.includes(',') && cleaned.startsWith('data:')) {
+    cleaned = cleaned.split(',')[1]
+  }
+  return cleaned.replace(/\s/g, '')
+}
+
+function respond(ok: boolean, payload: Record<string, unknown>) {
+  return new Response(
+    JSON.stringify({ ok, ...payload }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -12,10 +28,10 @@ Deno.serve(async (req) => {
 
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured')
+    if (!LOVABLE_API_KEY) return respond(false, { error: 'LOVABLE_API_KEY is not configured' })
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured')
+    if (!RESEND_API_KEY) return respond(false, { error: 'RESEND_API_KEY is not configured' })
 
     const {
       recipientEmail,
@@ -28,10 +44,7 @@ Deno.serve(async (req) => {
     } = await req.json()
 
     if (!recipientEmail || !orderNumber || !customerAddress) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return respond(false, { error: 'Saknar obligatoriska fält (e-post, ordernummer, adress)' })
     }
 
     const subject = `A-ORDER ${orderNumber} — ${customerAddress}`
@@ -50,7 +63,7 @@ Deno.serve(async (req) => {
     if (pdfBase64) {
       attachments.push({
         filename: `A-ORDER-${orderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`,
-        content: pdfBase64,
+        content: cleanBase64(pdfBase64),
       })
     }
 
@@ -58,10 +71,12 @@ Deno.serve(async (req) => {
       imageAttachments.forEach((img: { filename: string; content: string }, i: number) => {
         attachments.push({
           filename: img.filename || `bild-${i + 1}.jpg`,
-          content: img.content,
+          content: cleanBase64(img.content),
         })
       })
     }
+
+    console.log(`Sending email to ${recipientEmail}, ${attachments.length} attachments`)
 
     const response = await fetch(`${GATEWAY_URL}/emails`, {
       method: 'POST',
@@ -81,22 +96,21 @@ Deno.serve(async (req) => {
     })
 
     const data = await response.json()
+    console.log(`Resend response [${response.status}]:`, JSON.stringify(data))
 
     if (!response.ok) {
-      console.error('Resend API error:', JSON.stringify(data))
-      throw new Error(`Resend API error [${response.status}]: ${JSON.stringify(data)}`)
+      const msg = data?.message || data?.error || JSON.stringify(data)
+      return respond(false, {
+        error: `Resend-fel (${response.status}): ${msg}`,
+        resendStatus: response.status,
+        resendBody: data,
+      })
     }
 
-    return new Response(
-      JSON.stringify({ success: true, id: data.id }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return respond(true, { id: data.id })
   } catch (error: unknown) {
-    console.error('Error sending order email:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('Edge function error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Okänt fel'
+    return respond(false, { error: errorMessage })
   }
 })
