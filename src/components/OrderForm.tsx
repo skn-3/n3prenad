@@ -30,6 +30,7 @@ interface UploadedImage {
 
 export default function OrderForm() {
   const { products } = useProducts();
+  const { teams } = useTeams();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [orderNumber, setOrderNumber] = useState(peekOrderNumber());
   const [customerAddress, setCustomerAddress] = useState('');
