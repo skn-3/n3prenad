@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderForm from '@/components/OrderForm';
 import ProductCatalog from '@/components/ProductCatalog';
 import TeamManager from '@/components/TeamManager';
-import { FileText, Package, Users } from 'lucide-react';
+import OrderHistory from '@/components/OrderHistory';
+import { FileText, Package, Users, History } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -37,6 +38,10 @@ const Index = () => {
               <Users className="h-4 w-4" />
               Montageteam
             </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <History className="h-4 w-4" />
+              Orderhistorik
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="order">
@@ -47,6 +52,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="teams">
             <TeamManager />
+          </TabsContent>
+          <TabsContent value="history">
+            <OrderHistory />
           </TabsContent>
         </Tabs>
       </main>

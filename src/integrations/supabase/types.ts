@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          created_at: string
+          customer_address: string
+          customer_name: string | null
+          customer_phone: string | null
+          date: string
+          description: string
+          distance_km: number
+          doors_count: number
+          facade_type: string
+          id: string
+          invoice_sent_at: string | null
+          line_items: Json
+          order_number: number
+          status: string
+          team_bankgiro: string
+          team_company: string
+          team_email: string
+          team_id: string
+          team_org_nr: string
+          total_amount: number
+          windows_count: number
+        }
+        Insert: {
+          created_at?: string
+          customer_address: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          date: string
+          description?: string
+          distance_km?: number
+          doors_count?: number
+          facade_type?: string
+          id?: string
+          invoice_sent_at?: string | null
+          line_items?: Json
+          order_number: number
+          status?: string
+          team_bankgiro: string
+          team_company: string
+          team_email: string
+          team_id: string
+          team_org_nr: string
+          total_amount?: number
+          windows_count?: number
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          date?: string
+          description?: string
+          distance_km?: number
+          doors_count?: number
+          facade_type?: string
+          id?: string
+          invoice_sent_at?: string | null
+          line_items?: Json
+          order_number?: number
+          status?: string
+          team_bankgiro?: string
+          team_company?: string
+          team_email?: string
+          team_id?: string
+          team_org_nr?: string
+          total_amount?: number
+          windows_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
