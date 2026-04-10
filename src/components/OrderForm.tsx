@@ -224,8 +224,8 @@ export default function OrderForm() {
         },
       });
 
-      if (error) throw error;
-      if (data && !data.success) throw new Error(data.error || 'Okänt fel');
+      if (error) throw new Error(error.message || 'Nätverksfel vid anrop');
+      if (data && !data.ok) throw new Error(data.error || 'Okänt fel från servern');
 
       toast.success(`Skickat till ${team.name} (${team.email})!`);
       setShowSendDialog(false);
