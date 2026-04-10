@@ -10,6 +10,7 @@ import { OrderLine, FacadeType } from '@/types/order';
 import { useTeams } from '@/components/TeamManager';
 import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
+import { saveOrderToSupabase } from '@/utils/saveOrder';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
 import { useProducts } from '@/hooks/useProducts';
 import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
@@ -143,7 +144,7 @@ export default function OrderForm() {
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
     if (!teamId) { toast.error('Välj montör'); return; }
 
@@ -165,6 +166,28 @@ export default function OrderForm() {
     pdf.save(`A-ORDER-${usedOrderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`);
     toast.success(`PDF genererad — Order #${usedOrderNumber}`);
     setPdfDownloaded(true);
+
+    // Save to Supabase in background
+    try {
+      await saveOrderToSupabase({
+        orderNumber: usedOrderNumber,
+        date,
+        customerAddress,
+        customerName,
+        customerPhone,
+        facadeType,
+        windowCount,
+        doorCount,
+        teamId: team.name,
+        team,
+        kmDistance,
+        lines: allLines,
+        description,
+        totalAmount: totalSum,
+      });
+    } catch (err) {
+      console.error('Could not save order to DB:', err);
+    }
   };
 
   const handleSendToMontör = () => {
