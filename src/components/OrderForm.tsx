@@ -43,6 +43,7 @@ export default function OrderForm() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Accessories
