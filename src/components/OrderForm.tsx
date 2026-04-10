@@ -34,6 +34,8 @@ export default function OrderForm() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [orderNumber, setOrderNumber] = useState(peekOrderNumber());
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [facadeType, setFacadeType] = useState<FacadeType>('tra');
   const [windowCount, setWindowCount] = useState(0);
   const [doorCount, setDoorCount] = useState(0);
@@ -206,8 +208,8 @@ export default function OrderForm() {
 
       // Convert images to base64
       const imageAttachments = await Promise.all(
-        images.map(async (img) => ({
-          filename: img.file.name,
+        images.map(async (img, idx) => ({
+          filename: `Bild-${idx + 1}.png`,
           content: await fileToBase64(img.file),
         }))
       );
@@ -218,6 +220,8 @@ export default function OrderForm() {
           recipientName: team.name,
           orderNumber: usedOrderNumber,
           customerAddress,
+          customerName,
+          customerPhone,
           description,
           pdfBase64,
           imageAttachments,
@@ -242,6 +246,8 @@ export default function OrderForm() {
     setDate(new Date().toISOString().split('T')[0]);
     setOrderNumber(peekOrderNumber());
     setCustomerAddress('');
+    setCustomerName('');
+    setCustomerPhone('');
     setFacadeType('tra');
     setWindowCount(0);
     setDoorCount(0);
@@ -283,6 +289,22 @@ export default function OrderForm() {
               placeholder="Åkerbärsvägen 26 Nykvarn"
               value={customerAddress}
               onChange={e => setCustomerAddress(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Kundnamn</Label>
+            <Input
+              placeholder="Anna Andersson"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Kundtelefon</Label>
+            <Input
+              placeholder="070-123 45 67"
+              value={customerPhone}
+              onChange={e => setCustomerPhone(e.target.value)}
             />
           </div>
         </CardContent>
@@ -397,27 +419,37 @@ export default function OrderForm() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {accessories.map(item => (
-              <div key={item.id} className="flex items-center gap-2">
-                <div className="flex-1 text-sm">{item.name} <span className="text-muted-foreground">({item.price} kr)</span></div>
-                <Input
-                  type="number"
-                  min={0}
-                  className="w-20"
-                  value={accessoryQuantities[item.id] || 0}
-                  onChange={e => setAccessoryQuantities(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAllUnits(item.id)}
-                  disabled={totalUnits === 0}
-                  className="text-xs whitespace-nowrap"
-                >
-                  Alla ({totalUnits})
-                </Button>
-              </div>
-            ))}
+            {accessories.map(item => {
+              const qty = accessoryQuantities[item.id] || 0;
+              return (
+                <div key={item.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 text-sm">{item.name} <span className="text-muted-foreground">({item.price} kr)</span></div>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-20"
+                      value={qty}
+                      onChange={e => setAccessoryQuantities(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAllUnits(item.id)}
+                      disabled={totalUnits === 0}
+                      className="text-xs whitespace-nowrap"
+                    >
+                      Alla ({totalUnits})
+                    </Button>
+                  </div>
+                  {qty > totalUnits && totalUnits > 0 && (
+                    <p className="text-xs mt-1 ml-1" style={{ color: '#F97316' }}>
+                      ⚠ Antal överstiger totala enheter ({totalUnits} st)
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -429,18 +461,28 @@ export default function OrderForm() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            {extras.map(item => (
-              <div key={item.id} className="flex items-center gap-2">
-                <div className="flex-1 text-sm">{item.name} <span className="text-muted-foreground">({item.price} kr)</span></div>
-                <Input
-                  type="number"
-                  min={0}
-                  className="w-20"
-                  value={accessoryQuantities[item.id] || 0}
-                  onChange={e => setAccessoryQuantities(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
-                />
-              </div>
-            ))}
+            {extras.map(item => {
+              const qty = accessoryQuantities[item.id] || 0;
+              return (
+                <div key={item.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 text-sm">{item.name} <span className="text-muted-foreground">({item.price} kr)</span></div>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-20"
+                      value={qty}
+                      onChange={e => setAccessoryQuantities(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                    />
+                  </div>
+                  {qty > totalUnits && totalUnits > 0 && (
+                    <p className="text-xs mt-1 ml-1" style={{ color: '#F97316' }}>
+                      ⚠ Antal överstiger totala enheter ({totalUnits} st)
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {/* Manuella rader */}
           <div className="border-t pt-4 space-y-2">

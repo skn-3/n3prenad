@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
       recipientName,
       orderNumber,
       customerAddress,
+      customerName,
+      customerPhone,
       description,
       pdfBase64,
       imageAttachments,
@@ -50,12 +52,13 @@ Deno.serve(async (req) => {
     const subject = `A-ORDER ${orderNumber} — ${customerAddress}`
 
     const htmlBody = `
-      <p>Hej ${recipientName || 'montör'},</p>
-      <p>Här kommer arbetsorder <strong>${orderNumber}</strong> för <strong>${customerAddress}</strong>.</p>
-      ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/g, '<br/>')}</p>` : ''}
-      <p>PDF och eventuella bilder bifogas.</p>
-      <br/>
-      <p>Mvh<br/>SmartKlimat N3prenad</p>
+<h2 style="color: #22C55E; margin-bottom: 4px;">A-ORDER ${orderNumber}</h2>
+<p style="font-size: 18px; margin-top: 0;"><strong>${customerAddress}</strong></p>
+<hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;" />
+<p><strong>Kund:</strong> ${customerName || '—'}<br/><strong>Telefon:</strong> ${customerPhone || '—'}</p>
+${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/g, '<br/>')}</p>` : ''}
+<hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;" />
+<p style="color: #888; font-size: 13px;">PDF och eventuella bilder bifogas.<br/>Mvh<br/>SmartKlimat N3prenad</p>
     `
 
     const attachments: { filename: string; content: string }[] = []
