@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         'X-Connection-Api-Key': RESEND_API_KEY,
       },
       body: JSON.stringify({
-        from: 'SmartKlimat N3prenad <n3prenad@send.smartklimat.org>',
+        from: 'SmartKlimat N3prenad <n3prenad@smartklimat.org>',
         reply_to: 'n3prenad@smartklimat.org',
         to: [recipientEmail],
         subject,
