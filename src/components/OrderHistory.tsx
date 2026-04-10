@@ -212,52 +212,52 @@ export default function OrderHistory() {
 
       {/* Invoice dialog */}
       <Dialog open={!!invoiceOrder} onOpenChange={(open) => !open && setInvoiceOrder(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
             <DialogTitle>Konvertera till faktura — #{invoiceOrder?.order_number}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Justera antal vid behov innan du genererar faktura-PDF.</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Benämning</th>
-                    <th className="text-right p-2">Å-pris</th>
-                    <th className="text-right p-2 w-24">Antal</th>
-                    <th className="text-right p-2">Summa</th>
+          <div className="px-6 overflow-y-auto flex-1 min-h-0">
+            <p className="text-sm text-muted-foreground mb-3">Justera antal vid behov innan du genererar faktura-PDF.</p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Benämning</th>
+                  <th className="text-right p-2">Å-pris</th>
+                  <th className="text-right p-2 w-24">Antal</th>
+                  <th className="text-right p-2">Summa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceLines.map((line, idx) => (
+                  <tr key={idx} className="border-b">
+                    <td className="p-2">{line.name}</td>
+                    <td className="p-2 text-right">{line.unit_price?.toLocaleString('sv-SE')}</td>
+                    <td className="p-2 text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-20 ml-auto text-right"
+                        value={line.quantity}
+                        onChange={e => updateInvoiceLineQty(idx, Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="p-2 text-right font-medium">{line.sum?.toLocaleString('sv-SE')}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {invoiceLines.map((line, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="p-2">{line.name}</td>
-                      <td className="p-2 text-right">{line.unit_price?.toLocaleString('sv-SE')}</td>
-                      <td className="p-2 text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          className="w-20 ml-auto text-right"
-                          value={line.quantity}
-                          onChange={e => updateInvoiceLineQty(idx, Number(e.target.value))}
-                        />
-                      </td>
-                      <td className="p-2 text-right font-medium">{line.sum?.toLocaleString('sv-SE')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="text-right text-lg font-bold text-primary">
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t px-6 py-4 flex items-center justify-between">
+            <div className="text-lg font-bold text-primary">
               Totalt: {invoiceTotal.toLocaleString('sv-SE')} kr
             </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setInvoiceOrder(null)} disabled={saving}>Avbryt</Button>
+              <Button onClick={generateInvoice} disabled={saving}>
+                {saving ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Genererar...</> : 'Generera faktura-PDF'}
+              </Button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setInvoiceOrder(null)} disabled={saving}>Avbryt</Button>
-            <Button onClick={generateInvoice} disabled={saving}>
-              {saving ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Genererar...</> : 'Generera faktura-PDF'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
