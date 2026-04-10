@@ -12,8 +12,9 @@ import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
 import { useProducts } from '@/hooks/useProducts';
-import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const facadeLabels: Record<FacadeType, string> = {
   tra: 'Trä',
@@ -42,6 +43,7 @@ export default function OrderForm() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Accessories
@@ -166,6 +168,73 @@ export default function OrderForm() {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
     if (!teamId) { toast.error('Välj montör'); return; }
     setShowSendDialog(true);
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data:...;base64, prefix
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const confirmSendEmail = async () => {
+    setIsSending(true);
+    try {
+      const team = defaultTeams.find(t => t.id === teamId)!;
+      const usedOrderNumber = orderNumber;
+      if (usedOrderNumber === peekOrderNumber()) {
+        getNextOrderNumber();
+      }
+
+      // Generate PDF and get base64
+      const pdf = generateOrderPDF({
+        date,
+        orderNumber: usedOrderNumber,
+        customerAddress,
+        lines: allLines,
+        description,
+        team,
+      });
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+      // Convert images to base64
+      const imageAttachments = await Promise.all(
+        images.map(async (img) => ({
+          filename: img.file.name,
+          content: await fileToBase64(img.file),
+        }))
+      );
+
+      const { data, error } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          recipientEmail: team.email,
+          recipientName: team.name,
+          orderNumber: usedOrderNumber,
+          customerAddress,
+          description,
+          pdfBase64,
+          imageAttachments,
+        },
+      });
+
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error || 'Okänt fel');
+
+      toast.success(`Skickat till ${team.name} (${team.email})!`);
+      setShowSendDialog(false);
+      setPdfDownloaded(true);
+    } catch (err: any) {
+      console.error('Send email error:', err);
+      toast.error(`Kunde inte skicka: ${err.message || 'Okänt fel'}`);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const resetForm = () => {
@@ -510,14 +579,23 @@ export default function OrderForm() {
           <DialogHeader>
             <DialogTitle>Skicka till montör</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            E-postfunktion kommer snart. Montör: <strong>{selectedTeam?.name ?? '—'}</strong>.
-            Ladda ner PDF istället?
-          </p>
+          <div className="space-y-2 text-sm">
+            <p>Ordern skickas via e-post till:</p>
+            <p className="font-semibold">{selectedTeam?.name} — {selectedTeam?.email}</p>
+            <p className="text-muted-foreground">
+              Bifogat: PDF + {images.length} bild{images.length !== 1 ? 'er' : ''}
+            </p>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendDialog(false)}>Avbryt</Button>
-            <Button onClick={() => { setShowSendDialog(false); downloadPDF(); }}>
-              <Download className="h-4 w-4 mr-1" /> Ladda ner PDF
+            <Button variant="outline" onClick={() => setShowSendDialog(false)} disabled={isSending}>
+              Avbryt
+            </Button>
+            <Button onClick={confirmSendEmail} disabled={isSending} style={{ backgroundColor: '#F97316' }}>
+              {isSending ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Skickar...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-1" /> Skicka</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
