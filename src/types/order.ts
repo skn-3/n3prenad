@@ -35,6 +35,7 @@ export interface Team {
   orgNr: string;
   address: string;
   email: string;
+  invoiceEmail?: string;
   bankgiro: string;
   isActive: boolean;
 }

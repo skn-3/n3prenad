@@ -70,6 +70,7 @@ export default function TeamManager() {
                 <th className="text-left p-3">Org.nr</th>
                 <th className="text-left p-3">Adress</th>
                 <th className="text-left p-3">E-post</th>
+                <th className="text-left p-3">Faktura-epost</th>
                 <th className="text-left p-3">Bankgiro</th>
                 <th className="text-center p-3 w-16"></th>
               </tr>
@@ -91,6 +92,9 @@ export default function TeamManager() {
                   </td>
                   <td className="p-2">
                     <Input className="h-8 text-sm" value={team.email} onChange={e => updateField(team.id, 'email', e.target.value)} />
+                  </td>
+                  <td className="p-2">
+                    <Input className="h-8 text-sm" placeholder="(samma som e-post)" value={team.invoiceEmail || ''} onChange={e => updateField(team.id, 'invoiceEmail', e.target.value)} />
                   </td>
                   <td className="p-2">
                     <Input className="h-8 text-sm w-28" value={team.bankgiro} onChange={e => updateField(team.id, 'bankgiro', e.target.value)} />

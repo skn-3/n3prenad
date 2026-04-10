@@ -43,16 +43,18 @@ Deno.serve(async (req) => {
       description,
       pdfBase64,
       imageAttachments,
+      isInvoice,
     } = await req.json()
 
     if (!recipientEmail || !orderNumber || !customerAddress) {
       return respond(false, { error: 'Saknar obligatoriska fält (e-post, ordernummer, adress)' })
     }
 
-    const subject = `A-ORDER ${orderNumber} — ${customerAddress}`
+    const docType = isInvoice ? 'FAKTURA' : 'A-ORDER'
+    const subject = `${docType} ${orderNumber} — ${customerAddress}`
 
     const htmlBody = `
-<h2 style="color: #22C55E; margin-bottom: 4px;">A-ORDER ${orderNumber}</h2>
+<h2 style="color: #22C55E; margin-bottom: 4px;">${docType} ${orderNumber}</h2>
 <p style="font-size: 18px; margin-top: 0;"><strong>${customerAddress}</strong></p>
 <hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;" />
 <p><strong>Kund:</strong> ${customerName || '—'}<br/><strong>Telefon:</strong> ${customerPhone || '—'}</p>
@@ -65,7 +67,7 @@ ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/
 
     if (pdfBase64) {
       attachments.push({
-        filename: `A-ORDER-${orderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`,
+        filename: `${docType}-${orderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`,
         content: cleanBase64(pdfBase64),
       })
     }
@@ -79,7 +81,21 @@ ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/
       })
     }
 
-    console.log(`Sending email to ${recipientEmail}, ${attachments.length} attachments`)
+    console.log(`Sending ${docType} email to ${recipientEmail}, ${attachments.length} attachments`)
+
+    const emailPayload: Record<string, unknown> = {
+      from: 'SmartKlimat N3prenad <n3prenad@smartklimat.org>',
+      reply_to: 'n3prenad@smartklimat.org',
+      to: [recipientEmail],
+      subject,
+      html: htmlBody,
+      attachments,
+    }
+
+    // CC daniel@malke.se on all invoice emails
+    if (isInvoice) {
+      emailPayload.cc = ['daniel@malke.se']
+    }
 
     const response = await fetch(`${GATEWAY_URL}/emails`, {
       method: 'POST',
@@ -88,14 +104,7 @@ ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'X-Connection-Api-Key': RESEND_API_KEY,
       },
-      body: JSON.stringify({
-        from: 'SmartKlimat N3prenad <n3prenad@smartklimat.org>',
-        reply_to: 'n3prenad@smartklimat.org',
-        to: [recipientEmail],
-        subject,
-        html: htmlBody,
-        attachments,
-      }),
+      body: JSON.stringify(emailPayload),
     })
 
     const data = await response.json()
