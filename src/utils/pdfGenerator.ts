@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { OrderLine } from '@/types/order';
 import { companyInfo } from '@/data/companyInfo';
 import { Team } from '@/types/order';
+import { logoBase64 } from '@/assets/logoBase64';
 
 interface PDFData {
   date: string;
@@ -25,20 +26,28 @@ export function generateOrderPDF(data: PDFData): jsPDF {
   const headerBg = [55, 65, 81] as const; // dark gray for table header
 
   // --- HEADER ---
-  // Company info (left)
-  doc.setFontSize(18);
+  // Logo (left)
+  try {
+    doc.addImage(logoBase64, 'PNG', margin, 8, 18, 18);
+  } catch (e) {
+    // fallback if image fails
+  }
+
+  // Company info (left, next to logo)
+  const textX = margin + 21;
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkGray);
-  doc.text('Smartklimat', margin, 18);
-  doc.setFontSize(13);
-  doc.text('Entreprenad', margin, 24);
+  doc.text('SmartKlimat', textX, 16);
+  doc.setFontSize(12);
+  doc.text('N3prenad', textX, 22);
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
-  doc.text(companyInfo.orgNr, margin, 30);
-  doc.text(`${companyInfo.address} ${companyInfo.postalCode}`, margin, 34);
-  doc.text(companyInfo.city, margin, 38);
+  doc.text(companyInfo.orgNr, textX, 28);
+  doc.text(`${companyInfo.address} ${companyInfo.postalCode}`, textX, 32);
+  doc.text(companyInfo.city, textX, 36);
 
   // Date (right top)
   doc.setFontSize(10);

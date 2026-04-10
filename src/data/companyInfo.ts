@@ -1,5 +1,5 @@
 export const companyInfo = {
-  name: 'Smartklimat Entreprenad',
+  name: 'SmartKlimat N3prenad',
   legalName: 'SMARTKLIMAT N3PRENAD AB',
   orgNr: '559026-6630',
   address: 'Morsstigen 3',
