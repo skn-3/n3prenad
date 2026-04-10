@@ -170,6 +170,73 @@ export default function OrderForm() {
     setShowSendDialog(true);
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data:...;base64, prefix
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const confirmSendEmail = async () => {
+    setIsSending(true);
+    try {
+      const team = defaultTeams.find(t => t.id === teamId)!;
+      const usedOrderNumber = orderNumber;
+      if (usedOrderNumber === peekOrderNumber()) {
+        getNextOrderNumber();
+      }
+
+      // Generate PDF and get base64
+      const pdf = generateOrderPDF({
+        date,
+        orderNumber: usedOrderNumber,
+        customerAddress,
+        lines: allLines,
+        description,
+        team,
+      });
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+      // Convert images to base64
+      const imageAttachments = await Promise.all(
+        images.map(async (img) => ({
+          filename: img.file.name,
+          content: await fileToBase64(img.file),
+        }))
+      );
+
+      const { data, error } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          recipientEmail: team.email,
+          recipientName: team.name,
+          orderNumber: usedOrderNumber,
+          customerAddress,
+          description,
+          pdfBase64,
+          imageAttachments,
+        },
+      });
+
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error || 'Okänt fel');
+
+      toast.success(`Skickat till ${team.name} (${team.email})!`);
+      setShowSendDialog(false);
+      setPdfDownloaded(true);
+    } catch (err: any) {
+      console.error('Send email error:', err);
+      toast.error(`Kunde inte skicka: ${err.message || 'Okänt fel'}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const resetForm = () => {
     setDate(new Date().toISOString().split('T')[0]);
     setOrderNumber(peekOrderNumber());
