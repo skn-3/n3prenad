@@ -23,6 +23,7 @@ const facadeLabels: Record<FacadeType, string> = {
 export default function OrderForm() {
   const { products } = useProducts();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orderNumber, setOrderNumber] = useState(peekOrderNumber());
   const [customerAddress, setCustomerAddress] = useState('');
   const [facadeType, setFacadeType] = useState<FacadeType>('tra');
   const [windowCount, setWindowCount] = useState(0);
@@ -109,20 +110,25 @@ export default function OrderForm() {
       return;
     }
 
-    const orderNumber = getNextOrderNumber();
+    const usedOrderNumber = orderNumber;
+    // Advance counter if using the default next number
+    if (usedOrderNumber === peekOrderNumber()) {
+      getNextOrderNumber();
+      setOrderNumber(peekOrderNumber());
+    }
     const team = defaultTeams.find(t => t.id === teamId)!;
 
     const pdf = generateOrderPDF({
       date,
-      orderNumber,
+      orderNumber: usedOrderNumber,
       customerAddress,
       lines: allLines,
       description,
       team,
     });
 
-    pdf.save(`A-ORDER-${orderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`);
-    toast.success(`PDF genererad — Order #${orderNumber}`);
+    pdf.save(`A-ORDER-${usedOrderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`);
+    toast.success(`PDF genererad — Order #${usedOrderNumber}`);
   };
 
   return (
@@ -138,8 +144,13 @@ export default function OrderForm() {
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
           <div>
-            <Label>Ordernummer (nästa)</Label>
-            <Input value={peekOrderNumber()} disabled className="bg-muted" />
+            <Label>Ordernummer</Label>
+            <Input
+              type="number"
+              min={1}
+              value={orderNumber}
+              onChange={e => setOrderNumber(Number(e.target.value))}
+            />
           </div>
           <div className="md:col-span-1">
             <Label>Kundadress (gata + ort)</Label>
@@ -161,11 +172,11 @@ export default function OrderForm() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Antal fönster</Label>
-              <Input type="number" min={0} value={windowCount} onChange={e => setWindowCount(Number(e.target.value))} />
+              <Input type="number" min={0} value={windowCount || ''} onChange={e => setWindowCount(Number(e.target.value))} />
             </div>
             <div>
               <Label>Antal dörrar</Label>
-              <Input type="number" min={0} value={doorCount} onChange={e => setDoorCount(Number(e.target.value))} />
+              <Input type="number" min={0} value={doorCount || ''} onChange={e => setDoorCount(Number(e.target.value))} />
             </div>
           </div>
           <div>
@@ -211,10 +222,10 @@ export default function OrderForm() {
           </div>
           <div>
             <Label>Avstånd enkel väg (km)</Label>
-            <Input type="number" min={0} value={kmDistance} onChange={e => setKmDistance(Number(e.target.value))} />
+            <Input type="number" min={0} value={kmDistance || ''} onChange={e => setKmDistance(Number(e.target.value))} />
             {kmDistance > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Bilersättning: {(6.63 * kmDistance * 2).toFixed(0)} kr | Restid: {(11.73 * kmDistance).toFixed(0)} kr
+                Bilersättning: {(6.63 * kmDistance * 2).toFixed(0)} kr | Restid: {(11.73 * kmDistance * 2).toFixed(0)} kr
               </p>
             )}
           </div>

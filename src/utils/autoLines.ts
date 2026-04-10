@@ -13,7 +13,7 @@ export function generateAutoLines(params: AutoLineParams): OrderLine[] {
   if (totalUnits === 0) return [];
 
   const kmReturn = kmDistance * 2;
-  const minutes = kmDistance; // ~1 min/km
+  const minutes = kmDistance * 2; // ~1 min/km, tur och retur
 
   const lines: OrderLine[] = [];
   let id = 0;
