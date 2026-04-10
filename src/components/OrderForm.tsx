@@ -1,17 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { OrderLine, FacadeType } from '@/types/order';
 import { defaultTeams } from '@/data/teams';
 import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
 import { useProducts } from '@/hooks/useProducts';
-import { Plus, Trash2, Download, FileText } from 'lucide-react';
+import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const facadeLabels: Record<FacadeType, string> = {
@@ -19,6 +20,12 @@ const facadeLabels: Record<FacadeType, string> = {
   sten: 'Sten/Betong',
   puts: 'Puts',
 };
+
+interface UploadedImage {
+  id: string;
+  file: File;
+  preview: string;
+}
 
 export default function OrderForm() {
   const { products } = useProducts();
@@ -32,6 +39,10 @@ export default function OrderForm() {
   const [kmDistance, setKmDistance] = useState(0);
   const [description, setDescription] = useState('');
   const [manualLines, setManualLines] = useState<OrderLine[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [pdfDownloaded, setPdfDownloaded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Accessories
   const accessories = useMemo(() => products.filter(p =>
@@ -100,21 +111,40 @@ export default function OrderForm() {
     setManualLines(prev => prev.filter(l => l.id !== id));
   };
 
-  const handleDownloadPDF = () => {
-    if (!customerAddress) {
-      toast.error('Ange kundadress');
-      return;
-    }
-    if (!teamId) {
-      toast.error('Välj montör');
-      return;
-    }
+  // Image handling
+  const addImages = useCallback((files: FileList | File[]) => {
+    const newImages: UploadedImage[] = Array.from(files)
+      .filter(f => f.type.startsWith('image/'))
+      .map(file => ({
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+    setImages(prev => [...prev, ...newImages]);
+  }, []);
+
+  const removeImage = (id: string) => {
+    setImages(prev => {
+      const img = prev.find(i => i.id === id);
+      if (img) URL.revokeObjectURL(img.preview);
+      return prev.filter(i => i.id !== id);
+    });
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
+  }, [addImages]);
+
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+
+  const downloadPDF = () => {
+    if (!customerAddress) { toast.error('Ange kundadress'); return; }
+    if (!teamId) { toast.error('Välj montör'); return; }
 
     const usedOrderNumber = orderNumber;
-    // Advance counter if using the default next number
     if (usedOrderNumber === peekOrderNumber()) {
       getNextOrderNumber();
-      setOrderNumber(peekOrderNumber());
     }
     const team = defaultTeams.find(t => t.id === teamId)!;
 
@@ -129,6 +159,31 @@ export default function OrderForm() {
 
     pdf.save(`A-ORDER-${usedOrderNumber}-${customerAddress.replace(/\s+/g, '_')}.pdf`);
     toast.success(`PDF genererad — Order #${usedOrderNumber}`);
+    setPdfDownloaded(true);
+  };
+
+  const handleSendToMontör = () => {
+    if (!customerAddress) { toast.error('Ange kundadress'); return; }
+    if (!teamId) { toast.error('Välj montör'); return; }
+    setShowSendDialog(true);
+  };
+
+  const resetForm = () => {
+    setDate(new Date().toISOString().split('T')[0]);
+    setOrderNumber(peekOrderNumber());
+    setCustomerAddress('');
+    setFacadeType('tra');
+    setWindowCount(0);
+    setDoorCount(0);
+    setTeamId('');
+    setKmDistance(0);
+    setDescription('');
+    setManualLines([]);
+    setAccessoryQuantities({});
+    images.forEach(img => URL.revokeObjectURL(img.preview));
+    setImages([]);
+    setPdfDownloaded(false);
+    toast.info('Formuläret nollställt');
   };
 
   return (
@@ -370,6 +425,57 @@ export default function OrderForm() {
         </CardContent>
       </Card>
 
+      {/* Steg 8: Bilder */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" /> 8. Bilder
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">
+            Bilder bifogas i e-post till montör (inkluderas inte i PDF).
+          </p>
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+          >
+            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Dra & släpp bilder här eller klicka för att välja</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={e => e.target.files && addImages(e.target.files)}
+          />
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mt-4">
+              {images.map(img => (
+                <div key={img.id} className="relative group">
+                  <img
+                    src={img.preview}
+                    alt={img.file.name}
+                    className="w-full h-24 object-cover rounded-md border"
+                  />
+                  <button
+                    onClick={() => removeImage(img.id)}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <p className="text-[10px] text-muted-foreground truncate mt-1">{img.file.name}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg p-4 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -377,12 +483,45 @@ export default function OrderForm() {
             <p className="text-sm text-muted-foreground">{allLines.length} rader</p>
             <p className="text-2xl font-bold text-primary">{totalSum.toLocaleString('sv-SE')} kr</p>
           </div>
-          <Button size="lg" onClick={handleDownloadPDF} className="gap-2">
-            <Download className="h-5 w-5" />
-            Ladda ner PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            {pdfDownloaded && (
+              <Button variant="outline" size="lg" onClick={resetForm} className="gap-2">
+                <RefreshCw className="h-4 w-4" /> Ny order
+              </Button>
+            )}
+            <Button size="lg" onClick={downloadPDF} className="gap-2">
+              <Download className="h-5 w-5" /> Ladda ner PDF
+            </Button>
+            <Button
+              size="lg"
+              onClick={handleSendToMontör}
+              className="gap-2"
+              style={{ backgroundColor: '#F97316' }}
+            >
+              <Send className="h-5 w-5" /> Skicka till montör
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Send dialog */}
+      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Skicka till montör</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            E-postfunktion kommer snart. Montör: <strong>{selectedTeam?.name ?? '—'}</strong>.
+            Ladda ner PDF istället?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendDialog(false)}>Avbryt</Button>
+            <Button onClick={() => { setShowSendDialog(false); downloadPDF(); }}>
+              <Download className="h-4 w-4 mr-1" /> Ladda ner PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

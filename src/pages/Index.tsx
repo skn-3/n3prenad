@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderForm from '@/components/OrderForm';
 import ProductCatalog from '@/components/ProductCatalog';
+import TeamManager from '@/components/TeamManager';
 import { FileText, Package, Users } from 'lucide-react';
 
 const Index = () => {
@@ -45,11 +46,7 @@ const Index = () => {
             <ProductCatalog />
           </TabsContent>
           <TabsContent value="teams">
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-lg font-medium">Montageteam</p>
-              <p className="text-sm">Hantering av montörer kommer i nästa steg.</p>
-            </div>
+            <TeamManager />
           </TabsContent>
         </Tabs>
       </main>
