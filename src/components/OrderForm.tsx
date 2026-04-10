@@ -124,6 +124,13 @@ export default function OrderForm() {
   const totalUnits = windowCount + doorCount;
   const selectedTeam = teams.find(t => t.id === teamId);
 
+  // Estimate PDF ~200KB + all image sizes
+  const estimatedPdfSize = 200 * 1024;
+  const totalImageSize = images.reduce((s, img) => s + img.compressedSize, 0);
+  const totalAttachmentSize = estimatedPdfSize + totalImageSize;
+  const totalAttachmentMB = totalAttachmentSize / (1024 * 1024);
+  const attachmentsTooLarge = totalAttachmentMB > 10;
+  const attachmentsWarning = totalAttachmentMB > 8;
   const setAllUnits = (productId: string) => {
     setAccessoryQuantities(prev => ({ ...prev, [productId]: totalUnits }));
   };
