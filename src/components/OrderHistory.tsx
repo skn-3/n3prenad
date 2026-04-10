@@ -51,7 +51,7 @@ export default function OrderHistory() {
       toast.error('Kunde inte hämta ordrar');
       console.error(error);
     } else {
-      setOrders(data || []);
+      setOrders((data || []).map((d: any) => ({ ...d, line_items: d.line_items as any[] })));
     }
     setLoading(false);
   };
