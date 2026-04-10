@@ -3,14 +3,13 @@ import { useProducts } from '@/hooks/useProducts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const categories = [
   'Alla', 'Etablering', 'Rivning', 'Montering Fönster', 'Montering Dörr',
-  'Bleck & Material', 'Tillbehör', 'Tillägg',
+  'Bleck & Material', 'Tillbehör', 'Tillägg', 'Övrigt',
 ];
 
 export default function ProductCatalog() {
@@ -45,18 +44,19 @@ export default function ProductCatalog() {
         </Button>
       </div>
 
-      {/* Filter */}
-      <div className="flex flex-wrap gap-2">
-        {categories.map(cat => (
-          <Badge
-            key={cat}
-            variant={filter === cat ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setFilter(cat)}
-          >
-            {cat}
-          </Badge>
-        ))}
+      {/* Category filter dropdown */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium">Kategori:</span>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat} {cat !== 'Alla' ? `(${products.filter(p => p.category === cat).length})` : `(${products.length})`}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Product list */}
@@ -72,15 +72,15 @@ export default function ProductCatalog() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(product => (
-                <tr key={product.id} className={`border-b ${!product.isActive ? 'opacity-50' : ''}`}>
+              {filtered.map((product, i) => (
+                <tr key={product.id} className={`border-b ${!product.isActive ? 'opacity-50' : ''} ${i % 2 === 0 ? 'bg-muted/30' : ''}`}>
                   <td className="p-3">{product.name}</td>
-                  <td className="p-3 text-muted-foreground">{product.category}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{product.category}</td>
                   <td className="p-3">
                     <Input
                       type="number"
                       step="0.01"
-                      className="w-28 ml-auto text-right"
+                      className="w-28 ml-auto text-right h-8"
                       value={product.price}
                       onChange={e => updateProduct(product.id, { price: parseFloat(e.target.value) || 0 })}
                     />
@@ -90,6 +90,7 @@ export default function ProductCatalog() {
                       variant={product.isActive ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => toggleActive(product.id)}
+                      className="text-xs h-7"
                     >
                       {product.isActive ? 'Aktiv' : 'Inaktiv'}
                     </Button>
@@ -107,8 +108,8 @@ export default function ProductCatalog() {
           <CardTitle className="text-base">Lägg till ny produkt</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
+          <div className="flex gap-2 items-end flex-wrap">
+            <div className="flex-1 min-w-[180px]">
               <Input placeholder="Benämning" value={newName} onChange={e => setNewName(e.target.value)} />
             </div>
             <div className="w-28">
