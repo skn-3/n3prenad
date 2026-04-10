@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { OrderLine, FacadeType } from '@/types/order';
-import { defaultTeams } from '@/data/teams';
+import { useTeams } from '@/components/TeamManager';
 import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
@@ -30,6 +30,7 @@ interface UploadedImage {
 
 export default function OrderForm() {
   const { products } = useProducts();
+  const { teams } = useTeams();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [orderNumber, setOrderNumber] = useState(peekOrderNumber());
   const [customerAddress, setCustomerAddress] = useState('');
@@ -82,7 +83,7 @@ export default function OrderForm() {
   const allLines = [...autoLines, ...accessoryLines, ...manualLines];
   const totalSum = allLines.reduce((s, l) => s + l.sum, 0);
   const totalUnits = windowCount + doorCount;
-  const selectedTeam = defaultTeams.find(t => t.id === teamId);
+  const selectedTeam = teams.find(t => t.id === teamId);
 
   const setAllUnits = (productId: string) => {
     setAccessoryQuantities(prev => ({ ...prev, [productId]: totalUnits }));
@@ -148,7 +149,7 @@ export default function OrderForm() {
     if (usedOrderNumber === peekOrderNumber()) {
       getNextOrderNumber();
     }
-    const team = defaultTeams.find(t => t.id === teamId)!;
+    const team = teams.find(t => t.id === teamId)!;
 
     const pdf = generateOrderPDF({
       date,
@@ -186,7 +187,7 @@ export default function OrderForm() {
   const confirmSendEmail = async () => {
     setIsSending(true);
     try {
-      const team = defaultTeams.find(t => t.id === teamId)!;
+      const team = teams.find(t => t.id === teamId)!;
       const usedOrderNumber = orderNumber;
       if (usedOrderNumber === peekOrderNumber()) {
         getNextOrderNumber();
@@ -336,7 +337,7 @@ export default function OrderForm() {
                 <SelectValue placeholder="Välj montör..." />
               </SelectTrigger>
               <SelectContent>
-                {defaultTeams.filter(t => t.isActive).map(team => (
+                {teams.filter(t => t.isActive).map(team => (
                   <SelectItem key={team.id} value={team.id}>
                     {team.name} — {team.companyName}
                   </SelectItem>
