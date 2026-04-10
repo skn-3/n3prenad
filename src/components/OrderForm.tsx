@@ -154,15 +154,30 @@ export default function OrderForm() {
   };
 
   // Image handling
-  const addImages = useCallback((files: FileList | File[]) => {
-    const newImages: UploadedImage[] = Array.from(files)
-      .filter(f => f.type.startsWith('image/'))
-      .map(file => ({
-        id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        file,
-        preview: URL.createObjectURL(file),
-      }));
-    setImages(prev => [...prev, ...newImages]);
+  const addImages = useCallback(async (files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const compressed: UploadedImage[] = [];
+    for (const file of imageFiles) {
+      try {
+        const { blob, preview } = await compressImage(file);
+        const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+        compressed.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: compressedFile,
+          preview,
+          compressedSize: blob.size,
+        });
+      } catch {
+        // fallback: use original
+        compressed.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          preview: URL.createObjectURL(file),
+          compressedSize: file.size,
+        });
+      }
+    }
+    setImages(prev => [...prev, ...compressed]);
   }, []);
 
   const removeImage = (id: string) => {
