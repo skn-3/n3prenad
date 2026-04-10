@@ -684,10 +684,27 @@ export default function OrderForm() {
                     <X className="h-3.5 w-3.5" />
                   </button>
                   <p className="text-[10px] text-muted-foreground truncate mt-1">{img.file.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatBytes(img.compressedSize)}</p>
                 </div>
               ))}
             </div>
           )}
+          {/* Total size info */}
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Totalt: {totalAttachmentMB.toFixed(1)} MB av max 10 MB
+            </p>
+            {attachmentsTooLarge && (
+              <p className="text-xs font-medium" style={{ color: '#EF4444' }}>
+                🚫 Bilagorna är för stora ({totalAttachmentMB.toFixed(1)} MB). Ta bort bilder innan du skickar.
+              </p>
+            )}
+            {attachmentsWarning && !attachmentsTooLarge && (
+              <p className="text-xs font-medium" style={{ color: '#F97316' }}>
+                ⚠ Bilagorna är stora ({totalAttachmentMB.toFixed(1)} MB). Mailet kan misslyckas om det överstiger 10 MB. Överväg att ta bort några bilder.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
