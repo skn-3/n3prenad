@@ -12,8 +12,9 @@ import { generateAutoLines } from '@/utils/autoLines';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { peekOrderNumber, getNextOrderNumber } from '@/hooks/useOrderCounter';
 import { useProducts } from '@/hooks/useProducts';
-import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Download, Send, Upload, X, ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const facadeLabels: Record<FacadeType, string> = {
   tra: 'Trä',
