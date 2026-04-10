@@ -257,6 +257,28 @@ export default function OrderForm() {
       toast.success(`Skickat till ${team.name} (${team.email})!`);
       setShowSendDialog(false);
       setPdfDownloaded(true);
+
+      // Save to Supabase in background
+      try {
+        await saveOrderToSupabase({
+          orderNumber: usedOrderNumber,
+          date,
+          customerAddress,
+          customerName,
+          customerPhone,
+          facadeType,
+          windowCount,
+          doorCount,
+          teamId: team.name,
+          team,
+          kmDistance,
+          lines: allLines,
+          description,
+          totalAmount: totalSum,
+        });
+      } catch (saveErr) {
+        console.error('Could not save order to DB:', saveErr);
+      }
     } catch (err: any) {
       console.error('Send email error:', err);
       toast.error(`Kunde inte skicka: ${err.message || 'Okänt fel'}`);
