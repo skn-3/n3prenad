@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderForm from '@/components/OrderForm';
 import ProductCatalog from '@/components/ProductCatalog';
+import TeamManager from '@/components/TeamManager';
 import { FileText, Package, Users } from 'lucide-react';
 
 const Index = () => {
