@@ -41,8 +41,7 @@ export const defaultProducts: Product[] = [
   { id: 'utv-smyg', name: 'Arbetskostnad Utv Smyg', price: 197, category: 'Tillbehör', isActive: true },
   { id: 'l-profil-mont', name: 'Montering utv Plåtinklädnad L-Profil', price: 234.6, category: 'Tillbehör', isActive: true },
   { id: 'l-profil-mat', name: 'Materialkostnad L-Profil', price: 638.5, category: 'Tillbehör', isActive: true },
-  { id: 'fonsterbänk', name: 'Montering Fönsterbänk', price: 155, category: 'Tillbehör', isActive: true },
-  { id: 'adeltralist', name: 'Montering Ädelträlist insida tröskel', price: 140.8, category: 'Tillbehör', isActive: true },
+  { id: 'mat-ub', name: 'Mat. Kostnad UB', price: 450.3, category: 'Tillbehör', isActive: true },
 
   // Tillägg
   { id: 'extra-timme', name: 'Extra Montagetimme', price: 469, category: 'Tillägg', isActive: true },

@@ -41,10 +41,10 @@ export function generateAutoLines(params: AutoLineParams): OrderLine[] {
     add('Montering Fönster', windowPrices[facadeType], windowCount);
   }
 
-  // Montering dörr
-  const doorPrices: Record<FacadeType, number> = { tra: 624, sten: 938, puts: 624 };
+  // Montering dörr (inkl ädelträlist 140.8 kr per dörr)
+  const doorPrices: Record<FacadeType, number> = { tra: 624 + 140.8, sten: 938 + 140.8, puts: 624 + 140.8 };
   if (doorCount > 0) {
-    add('Montering Dörr', doorPrices[facadeType], doorCount);
+    add('Montering Dörr (+Ädelträlist)', doorPrices[facadeType], doorCount);
   }
 
   // Byggavfall
