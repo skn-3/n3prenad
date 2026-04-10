@@ -46,11 +46,7 @@ const Index = () => {
             <ProductCatalog />
           </TabsContent>
           <TabsContent value="teams">
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-lg font-medium">Montageteam</p>
-              <p className="text-sm">Hantering av montörer kommer i nästa steg.</p>
-            </div>
+            <TeamManager />
           </TabsContent>
         </Tabs>
       </main>
