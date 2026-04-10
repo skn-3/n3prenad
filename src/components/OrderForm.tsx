@@ -728,7 +728,9 @@ export default function OrderForm() {
               size="lg"
               onClick={handleSendToMontör}
               className="gap-2"
-              style={{ backgroundColor: '#F97316' }}
+              style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
+              disabled={attachmentsTooLarge}
+              title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
             >
               <Send className="h-5 w-5" /> Skicka till montör
             </Button>
