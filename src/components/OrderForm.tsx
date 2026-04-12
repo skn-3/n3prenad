@@ -76,6 +76,7 @@ export default function OrderForm() {
   const [facadeType, setFacadeType] = useState<FacadeType>('tra');
   const [windowCount, setWindowCount] = useState(0);
   const [doorCount, setDoorCount] = useState(0);
+  const [roofWindowCount, setRoofWindowCount] = useState(0);
   const [teamId, setTeamId] = useState('');
   const [kmDistance, setKmDistance] = useState(0);
   const [description, setDescription] = useState('');
@@ -92,14 +93,14 @@ export default function OrderForm() {
   ), [products]);
 
   const extras = useMemo(() => products.filter(p =>
-    p.category === 'Tillägg' && p.isActive
+    p.category === 'Tillägg' && p.isActive && p.id !== 'takfonster'
   ), [products]);
 
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
 
   const autoLines = useMemo(() =>
-    generateAutoLines({ windowCount, doorCount, facadeType, kmDistance }),
-    [windowCount, doorCount, facadeType, kmDistance]
+    generateAutoLines({ windowCount, doorCount, roofWindowCount, facadeType, kmDistance }),
+    [windowCount, doorCount, roofWindowCount, facadeType, kmDistance]
   );
 
   const accessoryLines: OrderLine[] = useMemo(() => {
@@ -121,7 +122,7 @@ export default function OrderForm() {
 
   const allLines = [...autoLines, ...accessoryLines, ...manualLines];
   const totalSum = allLines.reduce((s, l) => s + l.sum, 0);
-  const totalUnits = windowCount + doorCount;
+  const totalUnits = windowCount + doorCount + roofWindowCount;
   const selectedTeam = teams.find(t => t.id === teamId);
 
   // Estimate PDF ~200KB + all image sizes
