@@ -355,6 +355,7 @@ export default function OrderForm() {
     setFacadeType('tra');
     setWindowCount(0);
     setDoorCount(0);
+    setRoofWindowCount(0);
     setTeamId('');
     setKmDistance(0);
     setDescription('');
@@ -420,7 +421,7 @@ export default function OrderForm() {
           <CardTitle className="text-lg">2. Projekttyp</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Antal fönster</Label>
               <Input type="number" min={0} value={windowCount || ''} onChange={e => setWindowCount(Number(e.target.value))} />
@@ -428,6 +429,10 @@ export default function OrderForm() {
             <div>
               <Label>Antal dörrar</Label>
               <Input type="number" min={0} value={doorCount || ''} onChange={e => setDoorCount(Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>Antal takfönster</Label>
+              <Input type="number" min={0} value={roofWindowCount || ''} onChange={e => setRoofWindowCount(Number(e.target.value))} />
             </div>
           </div>
           <div>
