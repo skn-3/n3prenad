@@ -3,13 +3,14 @@ import { FacadeType, OrderLine } from '@/types/order';
 interface AutoLineParams {
   windowCount: number;
   doorCount: number;
+  roofWindowCount: number;
   facadeType: FacadeType;
   kmDistance: number;
 }
 
 export function generateAutoLines(params: AutoLineParams): OrderLine[] {
-  const { windowCount, doorCount, facadeType, kmDistance } = params;
-  const totalUnits = windowCount + doorCount;
+  const { windowCount, doorCount, roofWindowCount, facadeType, kmDistance } = params;
+  const totalUnits = windowCount + doorCount + roofWindowCount;
   if (totalUnits === 0) return [];
 
   const kmReturn = kmDistance * 2;
@@ -45,6 +46,11 @@ export function generateAutoLines(params: AutoLineParams): OrderLine[] {
   const doorPrices: Record<FacadeType, number> = { tra: 624 + 140.8, sten: 938 + 140.8, puts: 624 + 140.8 };
   if (doorCount > 0) {
     add('Montering Dörr (+Ädelträlist)', doorPrices[facadeType], doorCount);
+  }
+
+  // Montering Takfönster
+  if (roofWindowCount > 0) {
+    add('Montering Takfönster inkl plåt & inv. smyg', 6803.4, roofWindowCount);
   }
 
   // Byggavfall
