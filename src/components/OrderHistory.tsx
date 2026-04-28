@@ -240,7 +240,6 @@ export default function OrderHistory() {
   const handleCreditInvoice = async (order: OrderRow, overrideInvoiceNumber?: string) => {
     const originalInvoiceNumber = overrideInvoiceNumber || order.invoice_number;
     if (!originalInvoiceNumber) {
-      // Open manual prompt
       setCreditPromptOrder(order);
       setManualInvoiceNumber('');
       return;
@@ -249,7 +248,7 @@ export default function OrderHistory() {
     const today = new Date().toISOString().split('T')[0];
 
     try {
-      // Generate credit PDF
+      // 1. Generate credit PDF (in-memory)
       const pdf = generateInvoicePDF({
         date: today,
         orderNumber: order.order_number,
@@ -264,16 +263,15 @@ export default function OrderHistory() {
         isCredit: true,
         creditOfInvoiceNumber: originalInvoiceNumber,
       });
-      pdf.save(`KREDITFAKTURA-${creditNumber}.pdf`);
 
-      // Save new credit row
+      // 2. Save credit row to DB FIRST (order_number = null to avoid any unique conflicts)
       const negativeLines = (order.line_items as any[]).map((l: any) => ({
         ...l,
         unit_price: -Math.abs(l.unit_price),
         sum: -Math.abs(l.sum),
       }));
       const { error: insertErr } = await supabase.from('orders').insert({
-        order_number: order.order_number,
+        order_number: null as any,
         date: today,
         customer_address: order.customer_address,
         customer_name: order.customer_name,
@@ -296,14 +294,17 @@ export default function OrderHistory() {
       } as any);
       if (insertErr) throw insertErr;
 
-      // Mark original as credited
+      // 3. Mark original as credited
       const { error: updErr } = await supabase
         .from('orders')
         .update({ status: 'credited' } as any)
         .eq('id', order.id);
       if (updErr) throw updErr;
 
-      // Send credit invoice email (CC daniel@malke.se)
+      // 4. Save PDF to disk
+      pdf.save(`KREDITFAKTURA-${creditNumber}.pdf`);
+
+      // 5. Now (and only now) send email
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
       const recipientEmail = getInvoiceEmail(order);
       try {
@@ -412,6 +413,30 @@ export default function OrderHistory() {
                           {order.status === 'invoiced' && (
                             <Button variant="outline" size="sm" onClick={() => handleCreditInvoice(order)} className="gap-1" title="Kreditera faktura">
                               <Undo2 className="h-3.5 w-3.5" /> Kreditera
+                            </Button>
+                          )}
+                          {order.status === 'credited' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // Find original order to re-invoice (positive lines)
+                                const original = order.credited_from_order_id
+                                  ? orders.find(o => o.id === order.credited_from_order_id)
+                                  : null;
+                                const source = original || order;
+                                const positiveLines = (source.line_items as any[]).map((l: any) => ({
+                                  ...l,
+                                  unit_price: Math.abs(l.unit_price),
+                                  sum: Math.abs(l.sum),
+                                }));
+                                setInvoiceLines(positiveLines);
+                                setInvoiceOrder({ ...source, line_items: positiveLines });
+                              }}
+                              className="gap-1"
+                              title="Skapa ny faktura"
+                            >
+                              <FileText className="h-3.5 w-3.5" /> → Ny faktura
                             </Button>
                           )}
                         </div>
