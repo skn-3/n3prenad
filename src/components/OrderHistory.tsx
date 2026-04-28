@@ -48,6 +48,8 @@ export default function OrderHistory() {
   const [isSending, setIsSending] = useState(false);
   const [pendingInvoiceNumber, setPendingInvoiceNumber] = useState<string | null>(null);
   const [creditedOrder, setCreditedOrder] = useState<OrderRow | null>(null);
+  const [creditPromptOrder, setCreditPromptOrder] = useState<OrderRow | null>(null);
+  const [manualInvoiceNumber, setManualInvoiceNumber] = useState('');
   const { teams, setTeams } = useTeams();
 
   const fetchOrders = async () => {
@@ -235,12 +237,15 @@ export default function OrderHistory() {
     }
   };
 
-  const handleCreditInvoice = async (order: OrderRow) => {
-    if (!order.invoice_number) {
-      toast.error('Saknar fakturanummer');
+  const handleCreditInvoice = async (order: OrderRow, overrideInvoiceNumber?: string) => {
+    const originalInvoiceNumber = overrideInvoiceNumber || order.invoice_number;
+    if (!originalInvoiceNumber) {
+      // Open manual prompt
+      setCreditPromptOrder(order);
+      setManualInvoiceNumber('');
       return;
     }
-    const creditNumber = `${order.invoice_number}K`;
+    const creditNumber = `${originalInvoiceNumber}K`;
     const today = new Date().toISOString().split('T')[0];
 
     try {
@@ -257,7 +262,7 @@ export default function OrderHistory() {
         teamAddress: '',
         invoiceNumber: creditNumber,
         isCredit: true,
-        creditOfInvoiceNumber: order.invoice_number,
+        creditOfInvoiceNumber: originalInvoiceNumber,
       });
       pdf.save(`KREDITFAKTURA-${creditNumber}.pdf`);
 
@@ -283,7 +288,7 @@ export default function OrderHistory() {
         doors_count: order.doors_count,
         facade_type: order.facade_type,
         line_items: negativeLines,
-        description: `Kreditering av faktura ${order.invoice_number}`,
+        description: `Kreditering av faktura ${originalInvoiceNumber}`,
         total_amount: -Math.abs(order.total_amount),
         status: 'credited',
         invoice_number: creditNumber,
@@ -310,12 +315,12 @@ export default function OrderHistory() {
             customerAddress: order.customer_address,
             customerName: order.customer_name,
             customerPhone: order.customer_phone,
-            description: `Kreditering av faktura ${order.invoice_number}`,
+            description: `Kreditering av faktura ${originalInvoiceNumber}`,
             pdfBase64,
             imageAttachments: [],
             isInvoice: true,
             isCredit: true,
-            creditOfInvoiceNumber: order.invoice_number,
+            creditOfInvoiceNumber: originalInvoiceNumber,
           },
         });
         if (emailError) throw new Error(emailError.message);
