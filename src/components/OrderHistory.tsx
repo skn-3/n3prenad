@@ -526,6 +526,50 @@ export default function OrderHistory() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manual invoice number prompt for legacy orders */}
+      <Dialog open={!!creditPromptOrder} onOpenChange={(open) => !open && setCreditPromptOrder(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ange fakturanummer att kreditera</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Denna order saknar sparat fakturanummer. Ange originalfakturans nummer manuellt (t.ex. <code>GVMO-012</code>).
+              Kreditfakturan blir då <strong>[ditt nummer]K</strong>.
+            </p>
+            <Input
+              autoFocus
+              placeholder="GVMO-012"
+              value={manualInvoiceNumber}
+              onChange={e => setManualInvoiceNumber(e.target.value.toUpperCase())}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && manualInvoiceNumber.trim() && creditPromptOrder) {
+                  const order = creditPromptOrder;
+                  const num = manualInvoiceNumber.trim();
+                  setCreditPromptOrder(null);
+                  handleCreditInvoice(order, num);
+                }
+              }}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setCreditPromptOrder(null)}>Avbryt</Button>
+            <Button
+              disabled={!manualInvoiceNumber.trim()}
+              onClick={() => {
+                if (!creditPromptOrder) return;
+                const order = creditPromptOrder;
+                const num = manualInvoiceNumber.trim();
+                setCreditPromptOrder(null);
+                handleCreditInvoice(order, num);
+              }}
+            >
+              Kreditera
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
