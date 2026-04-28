@@ -299,10 +299,10 @@ export default function OrderHistory() {
       if (updErr) throw updErr;
 
       // Send credit invoice email (CC daniel@malke.se)
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const recipientEmail = getInvoiceEmail(order);
       try {
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        const recipientEmail = getInvoiceEmail(order);
-        await supabase.functions.invoke('send-order-email', {
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-email', {
           body: {
             recipientEmail,
             recipientName: order.team_company,
@@ -315,13 +315,17 @@ export default function OrderHistory() {
             imageAttachments: [],
             isInvoice: true,
             isCredit: true,
+            creditOfInvoiceNumber: order.invoice_number,
           },
         });
-      } catch (e) {
+        if (emailError) throw new Error(emailError.message);
+        if (emailData && !emailData.ok) throw new Error(emailData.error || 'Okänt fel');
+        toast.success(`Kreditfaktura ${creditNumber} skapad och skickad till ${recipientEmail}`);
+      } catch (e: any) {
         console.warn('Kreditfaktura-mail misslyckades', e);
+        toast.warning(`Kreditfaktura ${creditNumber} skapad, men mail misslyckades: ${e.message}`);
       }
 
-      toast.success(`Kreditfaktura ${creditNumber} skapad`);
       await fetchOrders();
       setCreditedOrder(order);
     } catch (err: any) {

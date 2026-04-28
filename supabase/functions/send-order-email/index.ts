@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
       imageAttachments,
       isInvoice,
       isCredit,
+      creditOfInvoiceNumber,
     } = await req.json()
 
     if (!recipientEmail || !orderNumber || !customerAddress) {
@@ -58,6 +59,7 @@ Deno.serve(async (req) => {
     const htmlBody = `
 <h2 style="color: ${titleColor}; margin-bottom: 4px;">${docType} ${orderNumber}</h2>
 <p style="font-size: 18px; margin-top: 0;"><strong>${customerAddress}</strong></p>
+${isCredit && creditOfInvoiceNumber ? `<p style="color: ${titleColor}; font-weight: bold;">Denna kreditfaktura avser faktura ${creditOfInvoiceNumber}</p>` : ''}
 <hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;" />
 <p><strong>Kund:</strong> ${customerName || '—'}<br/><strong>Telefon:</strong> ${customerPhone || '—'}</p>
 ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/g, '<br/>')}</p>` : ''}
