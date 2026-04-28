@@ -10,6 +10,8 @@ export const defaultTeams: Team[] = [
     email: 'gvmo.bygg@gmail.com',
     bankgiro: '5648-0775',
     isActive: true,
+    invoicePrefix: 'GVMO',
+    nextInvoiceNumber: 1,
   },
   {
     id: 'samy',
@@ -20,6 +22,8 @@ export const defaultTeams: Team[] = [
     email: 'info@smtmbygg.se',
     bankgiro: '5082-6924',
     isActive: true,
+    invoicePrefix: 'SAMY',
+    nextInvoiceNumber: 1,
   },
   {
     id: 'alex',
@@ -30,6 +34,8 @@ export const defaultTeams: Team[] = [
     email: 'alex@nbdentreprenad.com',
     bankgiro: '833-7859',
     isActive: true,
+    invoicePrefix: 'ALEX',
+    nextInvoiceNumber: 1,
   },
   {
     id: 'jerk',
@@ -40,5 +46,7 @@ export const defaultTeams: Team[] = [
     email: 'jerk.ryttman@mockfjards.se',
     bankgiro: '852-9570',
     isActive: true,
+    invoicePrefix: 'JERK',
+    nextInvoiceNumber: 1,
   },
 ];

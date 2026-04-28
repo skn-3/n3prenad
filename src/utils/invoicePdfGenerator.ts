@@ -19,6 +19,9 @@ interface InvoiceData {
   teamOrgNr: string;
   teamBankgiro: string;
   teamAddress: string;
+  invoiceNumber?: string;
+  isCredit?: boolean;
+  creditOfInvoiceNumber?: string;
 }
 
 export function generateInvoicePDF(data: InvoiceData): jsPDF {
@@ -28,9 +31,15 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   const contentWidth = pageWidth - margin * 2;
 
   const green = [34, 197, 94] as const;
+  const red = [220, 38, 38] as const;
   const darkGray = [51, 51, 51] as const;
   const lightGray = [245, 245, 245] as const;
   const headerBg = [55, 65, 81] as const;
+
+  const isCredit = !!data.isCredit;
+  const accent = isCredit ? red : green;
+  const sign = isCredit ? -1 : 1;
+  const titleText = isCredit ? 'KREDITFAKTURA' : 'FAKTURA';
 
   // --- HEADER ---
   try {
@@ -56,16 +65,16 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   doc.text(data.date, pageWidth - margin, 14, { align: 'right' });
 
   // FAKTURA title
-  doc.setFontSize(36);
+  doc.setFontSize(isCredit ? 30 : 36);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...green);
-  doc.text('FAKTURA', pageWidth - margin, 30, { align: 'right' });
+  doc.setTextColor(...accent);
+  doc.text(titleText, pageWidth - margin, 30, { align: 'right' });
 
   // Invoice number
   doc.setFontSize(14);
   doc.setTextColor(...darkGray);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${data.orderNumber}`, pageWidth - margin, 38, { align: 'right' });
+  doc.text(`${data.invoiceNumber || data.orderNumber}`, pageWidth - margin, 38, { align: 'right' });
 
   // Customer address
   doc.setFontSize(10);
@@ -90,7 +99,7 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   doc.text('SUM', colSum, y + 5.5, { align: 'right' });
   y += 8;
 
-  const total = data.lines.reduce((s, l) => s + l.sum, 0);
+  const total = data.lines.reduce((s, l) => s + l.sum, 0) * sign;
 
   data.lines.forEach((line, i) => {
     if (y > 245) {
@@ -105,9 +114,9 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...darkGray);
     doc.text(line.name, colName, y + 5);
-    doc.text(formatPrice(line.unit_price), colPrice, y + 5, { align: 'right' });
+    doc.text(formatPrice(line.unit_price * sign), colPrice, y + 5, { align: 'right' });
     doc.text(String(line.quantity), colQty, y + 5, { align: 'right' });
-    doc.text(String(Math.round(line.sum)), colSum, y + 5, { align: 'right' });
+    doc.text(String(Math.round(line.sum * sign)), colSum, y + 5, { align: 'right' });
     y += 7;
   });
 
@@ -115,6 +124,14 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   doc.setDrawColor(200, 200, 200);
   doc.line(margin, y, margin + contentWidth, y);
   y += 4;
+
+  if (isCredit && data.creditOfInvoiceNumber) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...red);
+    doc.text(`Kreditering av faktura ${data.creditOfInvoiceNumber}`, margin, y + 4);
+    y += 8;
+  }
 
   if (data.description) {
     doc.setFontSize(8);
@@ -137,7 +154,7 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...green);
+  doc.setTextColor(...accent);
   doc.text(`Totalt: ${Math.round(total).toLocaleString('sv-SE')} kr`, pageWidth - margin, footerY, { align: 'right' });
 
   doc.setFontSize(9);

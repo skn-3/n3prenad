@@ -25,7 +25,7 @@ export function useTeams() {
 export default function TeamManager() {
   const { teams, setTeams } = useTeams();
 
-  const updateField = (id: string, field: keyof Team, value: string | boolean) => {
+  const updateField = (id: string, field: keyof Team, value: string | boolean | number) => {
     setTeams(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
@@ -39,6 +39,8 @@ export default function TeamManager() {
       email: '',
       bankgiro: '',
       isActive: true,
+      invoicePrefix: '',
+      nextInvoiceNumber: 1,
     };
     setTeams(prev => [...prev, newTeam]);
     toast.success('Nytt team tillagt');
@@ -72,6 +74,8 @@ export default function TeamManager() {
                 <th className="text-left p-3">E-post</th>
                 <th className="text-left p-3">Faktura-epost</th>
                 <th className="text-left p-3">Bankgiro</th>
+                <th className="text-left p-3">Fakturaprefix</th>
+                <th className="text-left p-3">Nästa fakturanr</th>
                 <th className="text-center p-3 w-16"></th>
               </tr>
             </thead>
@@ -98,6 +102,12 @@ export default function TeamManager() {
                   </td>
                   <td className="p-2">
                     <Input className="h-8 text-sm w-28" value={team.bankgiro} onChange={e => updateField(team.id, 'bankgiro', e.target.value)} />
+                  </td>
+                  <td className="p-2">
+                    <Input className="h-8 text-sm w-24" placeholder="GVMO" value={team.invoicePrefix || ''} onChange={e => updateField(team.id, 'invoicePrefix', e.target.value.toUpperCase())} />
+                  </td>
+                  <td className="p-2">
+                    <Input className="h-8 text-sm w-20" type="number" min={1} value={team.nextInvoiceNumber ?? 1} onChange={e => updateField(team.id, 'nextInvoiceNumber', Math.max(1, Number(e.target.value)))} />
                   </td>
                   <td className="p-2 text-center">
                     <Button variant="ghost" size="icon" onClick={() => removeTeam(team.id)} className="h-8 w-8">

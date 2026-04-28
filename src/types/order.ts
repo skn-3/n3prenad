@@ -38,6 +38,8 @@ export interface Team {
   invoiceEmail?: string;
   bankgiro: string;
   isActive: boolean;
+  invoicePrefix?: string;
+  nextInvoiceNumber?: number;
 }
 
 export type FacadeType = 'tra' | 'sten' | 'puts';
