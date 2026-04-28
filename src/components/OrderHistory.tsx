@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { useTeams } from '@/components/TeamManager';
-import { Download, FileText, Loader2, Send } from 'lucide-react';
+import { Download, FileText, Loader2, Send, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OrderRow {
@@ -33,6 +33,8 @@ interface OrderRow {
   status: string;
   invoice_sent_at: string | null;
   created_at: string;
+  invoice_number: string | null;
+  credited_from_order_id: string | null;
 }
 
 export default function OrderHistory() {
@@ -44,7 +46,9 @@ export default function OrderHistory() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pendingPdf, setPendingPdf] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
-  const { teams } = useTeams();
+  const [pendingInvoiceNumber, setPendingInvoiceNumber] = useState<string | null>(null);
+  const [creditedOrder, setCreditedOrder] = useState<OrderRow | null>(null);
+  const { teams, setTeams } = useTeams();
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -111,33 +115,25 @@ export default function OrderHistory() {
     return order.team_email;
   };
 
-  const generateInvoiceAndPrompt = async () => {
-    if (!invoiceOrder) return;
-    setSaving(true);
-    try {
-      const pdf = generateInvoicePDF({
-        date: new Date().toISOString().split('T')[0],
-        orderNumber: invoiceOrder.order_number,
-        customerAddress: invoiceOrder.customer_address,
-        lines: invoiceLines,
-        description: invoiceOrder.description,
-        teamCompany: invoiceOrder.team_company,
-        teamOrgNr: invoiceOrder.team_org_nr,
-        teamBankgiro: invoiceOrder.team_bankgiro,
-        teamAddress: '',
-      });
+  const findTeamFor = (order: OrderRow) =>
+    teams.find(t => t.name === order.team_id || t.companyName === order.team_company);
 
-      setPendingPdf(pdf);
-      setInvoiceOrder(null);
-      setShowSendDialog(true);
-    } catch (err: any) {
-      toast.error(`Fel: ${err.message}`);
-    } finally {
-      setSaving(false);
-    }
+  const buildInvoiceNumber = (order: OrderRow): string => {
+    const team = findTeamFor(order);
+    const prefix = (team?.invoicePrefix || order.team_id || 'INV').toUpperCase();
+    const num = team?.nextInvoiceNumber ?? 1;
+    return `${prefix}-${String(num).padStart(3, '0')}`;
   };
 
-  const finishInvoice = async (order: OrderRow) => {
+  const incrementTeamInvoiceCounter = (order: OrderRow) => {
+    const team = findTeamFor(order);
+    if (!team) return;
+    setTeams(prev => prev.map(t =>
+      t.id === team.id ? { ...t, nextInvoiceNumber: (t.nextInvoiceNumber ?? 1) + 1 } : t
+    ));
+  };
+
+  const finishInvoice = async (order: OrderRow, invoiceNumber: string) => {
     const newTotal = invoiceLines.reduce((s: number, l: any) => s + l.sum, 0);
     const { error } = await supabase
       .from('orders')
@@ -146,9 +142,11 @@ export default function OrderHistory() {
         invoice_sent_at: new Date().toISOString(),
         line_items: invoiceLines,
         total_amount: newTotal,
+        invoice_number: invoiceNumber,
       } as any)
       .eq('id', order.id);
     if (error) console.error('Update error:', error);
+    incrementTeamInvoiceCounter(order);
     fetchOrders();
   };
 
@@ -159,6 +157,7 @@ export default function OrderHistory() {
     if (!invoiceOrder) return;
     setSaving(true);
     try {
+      const invoiceNumber = buildInvoiceNumber(invoiceOrder);
       const pdf = generateInvoicePDF({
         date: new Date().toISOString().split('T')[0],
         orderNumber: invoiceOrder.order_number,
@@ -169,10 +168,12 @@ export default function OrderHistory() {
         teamOrgNr: invoiceOrder.team_org_nr,
         teamBankgiro: invoiceOrder.team_bankgiro,
         teamAddress: '',
+        invoiceNumber,
       });
 
       setPendingPdf(pdf);
       setInvoiceOrderForSend(invoiceOrder);
+      setPendingInvoiceNumber(invoiceNumber);
       setInvoiceOrder(null);
       setShowSendDialog(true);
     } catch (err: any) {
@@ -183,21 +184,21 @@ export default function OrderHistory() {
   };
 
   const handleJustDownload = async () => {
-    if (!pendingPdf || !invoiceOrderForSend) return;
-    pendingPdf.save(`FAKTURA-${invoiceOrderForSend.order_number}.pdf`);
-    await finishInvoice(invoiceOrderForSend);
-    toast.success(`Faktura nedladdad för order #${invoiceOrderForSend.order_number}`);
+    if (!pendingPdf || !invoiceOrderForSend || !pendingInvoiceNumber) return;
+    pendingPdf.save(`FAKTURA-${pendingInvoiceNumber}.pdf`);
+    await finishInvoice(invoiceOrderForSend, pendingInvoiceNumber);
+    toast.success(`Faktura ${pendingInvoiceNumber} nedladdad`);
     setShowSendDialog(false);
     setPendingPdf(null);
     setInvoiceOrderForSend(null);
+    setPendingInvoiceNumber(null);
   };
 
   const handleSendAndDownload = async () => {
-    if (!pendingPdf || !invoiceOrderForSend) return;
+    if (!pendingPdf || !invoiceOrderForSend || !pendingInvoiceNumber) return;
     setIsSending(true);
     try {
-      // Download
-      pendingPdf.save(`FAKTURA-${invoiceOrderForSend.order_number}.pdf`);
+      pendingPdf.save(`FAKTURA-${pendingInvoiceNumber}.pdf`);
 
       // Get PDF base64
       const pdfBase64 = pendingPdf.output('datauristring').split(',')[1];
@@ -207,7 +208,7 @@ export default function OrderHistory() {
         body: {
           recipientEmail,
           recipientName: invoiceOrderForSend.team_company,
-          orderNumber: invoiceOrderForSend.order_number,
+          orderNumber: pendingInvoiceNumber,
           customerAddress: invoiceOrderForSend.customer_address,
           customerName: invoiceOrderForSend.customer_name,
           customerPhone: invoiceOrderForSend.customer_phone,
@@ -221,8 +222,8 @@ export default function OrderHistory() {
       if (error) throw new Error(error.message || 'Nätverksfel');
       if (data && !data.ok) throw new Error(data.error || 'Okänt fel');
 
-      await finishInvoice(invoiceOrderForSend);
-      toast.success(`Faktura skickad till ${recipientEmail} och nedladdad!`);
+      await finishInvoice(invoiceOrderForSend, pendingInvoiceNumber);
+      toast.success(`Faktura ${pendingInvoiceNumber} skickad till ${recipientEmail}`);
     } catch (err: any) {
       toast.error(`Kunde inte skicka: ${err.message}`);
     } finally {
@@ -230,7 +231,110 @@ export default function OrderHistory() {
       setShowSendDialog(false);
       setPendingPdf(null);
       setInvoiceOrderForSend(null);
+      setPendingInvoiceNumber(null);
     }
+  };
+
+  const handleCreditInvoice = async (order: OrderRow) => {
+    if (!order.invoice_number) {
+      toast.error('Saknar fakturanummer');
+      return;
+    }
+    const creditNumber = `${order.invoice_number}K`;
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      // Generate credit PDF
+      const pdf = generateInvoicePDF({
+        date: today,
+        orderNumber: order.order_number,
+        customerAddress: order.customer_address,
+        lines: order.line_items as any[],
+        description: order.description,
+        teamCompany: order.team_company,
+        teamOrgNr: order.team_org_nr,
+        teamBankgiro: order.team_bankgiro,
+        teamAddress: '',
+        invoiceNumber: creditNumber,
+        isCredit: true,
+        creditOfInvoiceNumber: order.invoice_number,
+      });
+      pdf.save(`KREDITFAKTURA-${creditNumber}.pdf`);
+
+      // Save new credit row
+      const negativeLines = (order.line_items as any[]).map((l: any) => ({
+        ...l,
+        unit_price: -Math.abs(l.unit_price),
+        sum: -Math.abs(l.sum),
+      }));
+      const { error: insertErr } = await supabase.from('orders').insert({
+        order_number: order.order_number,
+        date: today,
+        customer_address: order.customer_address,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        team_id: order.team_id,
+        team_company: order.team_company,
+        team_org_nr: order.team_org_nr,
+        team_bankgiro: order.team_bankgiro,
+        team_email: order.team_email,
+        distance_km: order.distance_km,
+        windows_count: order.windows_count,
+        doors_count: order.doors_count,
+        facade_type: order.facade_type,
+        line_items: negativeLines,
+        description: `Kreditering av faktura ${order.invoice_number}`,
+        total_amount: -Math.abs(order.total_amount),
+        status: 'credited',
+        invoice_number: creditNumber,
+        credited_from_order_id: order.id,
+      } as any);
+      if (insertErr) throw insertErr;
+
+      // Mark original as credited
+      const { error: updErr } = await supabase
+        .from('orders')
+        .update({ status: 'credited' } as any)
+        .eq('id', order.id);
+      if (updErr) throw updErr;
+
+      // Send credit invoice email (CC daniel@malke.se)
+      try {
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        const recipientEmail = getInvoiceEmail(order);
+        await supabase.functions.invoke('send-order-email', {
+          body: {
+            recipientEmail,
+            recipientName: order.team_company,
+            orderNumber: creditNumber,
+            customerAddress: order.customer_address,
+            customerName: order.customer_name,
+            customerPhone: order.customer_phone,
+            description: `Kreditering av faktura ${order.invoice_number}`,
+            pdfBase64,
+            imageAttachments: [],
+            isInvoice: true,
+            isCredit: true,
+          },
+        });
+      } catch (e) {
+        console.warn('Kreditfaktura-mail misslyckades', e);
+      }
+
+      toast.success(`Kreditfaktura ${creditNumber} skapad`);
+      await fetchOrders();
+      setCreditedOrder(order);
+    } catch (err: any) {
+      toast.error(`Kunde inte kreditera: ${err.message}`);
+    }
+  };
+
+  const handleCreateNewInvoiceAfterCredit = () => {
+    if (!creditedOrder) return;
+    // Re-open invoice dialog with original lines
+    setInvoiceLines((creditedOrder.line_items as any[]).map(l => ({ ...l })));
+    setInvoiceOrder(creditedOrder);
+    setCreditedOrder(null);
   };
 
   const invoiceTotal = invoiceLines.reduce((s: number, l: any) => s + l.sum, 0);
@@ -263,6 +367,7 @@ export default function OrderHistory() {
                     <th className="text-left p-2">Kundadress</th>
                     <th className="text-left p-2">Montör</th>
                     <th className="text-right p-2">Totalt</th>
+                    <th className="text-left p-2">Fakturanr</th>
                     <th className="text-center p-2">Status</th>
                     <th className="text-right p-2">Åtgärder</th>
                   </tr>
@@ -275,8 +380,11 @@ export default function OrderHistory() {
                       <td className="p-2">{order.customer_address}</td>
                       <td className="p-2">{order.team_company}</td>
                       <td className="p-2 text-right">{order.total_amount.toLocaleString('sv-SE')} kr</td>
+                      <td className="p-2 font-mono text-xs">{order.invoice_number || ''}</td>
                       <td className="p-2 text-center">
-                        {order.status === 'invoiced' ? (
+                        {order.status === 'credited' ? (
+                          <Badge variant="destructive">Krediterad</Badge>
+                        ) : order.status === 'invoiced' ? (
                           <Badge variant="secondary">Fakturerad</Badge>
                         ) : (
                           <Badge className="bg-primary text-primary-foreground">Order</Badge>
@@ -290,6 +398,11 @@ export default function OrderHistory() {
                           {order.status === 'order' && (
                             <Button variant="outline" size="sm" onClick={() => openInvoiceDialog(order)} className="gap-1">
                               <FileText className="h-3.5 w-3.5" /> → Faktura
+                            </Button>
+                          )}
+                          {order.status === 'invoiced' && (
+                            <Button variant="outline" size="sm" onClick={() => handleCreditInvoice(order)} className="gap-1" title="Kreditera faktura">
+                              <Undo2 className="h-3.5 w-3.5" /> Kreditera
                             </Button>
                           )}
                         </div>
@@ -387,6 +500,20 @@ export default function OrderHistory() {
                 <><Send className="h-4 w-4 mr-1" /> Skicka & ladda ner</>
               )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit follow-up dialog */}
+      <Dialog open={!!creditedOrder} onOpenChange={(open) => !open && setCreditedOrder(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Skapa ny faktura?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">Vill du skapa en ny faktura för detta ärende?</p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setCreditedOrder(null)}>Nej</Button>
+            <Button onClick={handleCreateNewInvoiceAfterCredit}>Ja</Button>
           </div>
         </DialogContent>
       </Dialog>
