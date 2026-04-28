@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ALTER COLUMN order_number DROP NOT NULL;
