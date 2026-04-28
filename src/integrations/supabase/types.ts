@@ -17,6 +17,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          credited_from_order_id: string | null
           customer_address: string
           customer_name: string | null
           customer_phone: string | null
@@ -26,6 +27,7 @@ export type Database = {
           doors_count: number
           facade_type: string
           id: string
+          invoice_number: string | null
           invoice_sent_at: string | null
           line_items: Json
           order_number: number
@@ -40,6 +42,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          credited_from_order_id?: string | null
           customer_address: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -49,6 +52,7 @@ export type Database = {
           doors_count?: number
           facade_type?: string
           id?: string
+          invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
           order_number: number
@@ -63,6 +67,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          credited_from_order_id?: string | null
           customer_address?: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -72,6 +77,7 @@ export type Database = {
           doors_count?: number
           facade_type?: string
           id?: string
+          invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
           order_number?: number
@@ -84,7 +90,15 @@ export type Database = {
           total_amount?: number
           windows_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_credited_from_order_id_fkey"
+            columns: ["credited_from_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
