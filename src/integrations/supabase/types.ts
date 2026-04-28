@@ -30,7 +30,7 @@ export type Database = {
           invoice_number: string | null
           invoice_sent_at: string | null
           line_items: Json
-          order_number: number
+          order_number: number | null
           status: string
           team_bankgiro: string
           team_company: string
@@ -55,7 +55,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
-          order_number: number
+          order_number?: number | null
           status?: string
           team_bankgiro: string
           team_company: string
@@ -80,7 +80,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
-          order_number?: number
+          order_number?: number | null
           status?: string
           team_bankgiro?: string
           team_company?: string
