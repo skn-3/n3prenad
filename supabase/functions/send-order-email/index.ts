@@ -44,17 +44,19 @@ Deno.serve(async (req) => {
       pdfBase64,
       imageAttachments,
       isInvoice,
+      isCredit,
     } = await req.json()
 
     if (!recipientEmail || !orderNumber || !customerAddress) {
       return respond(false, { error: 'Saknar obligatoriska fält (e-post, ordernummer, adress)' })
     }
 
-    const docType = isInvoice ? 'FAKTURA' : 'A-ORDER'
+    const docType = isCredit ? 'KREDITFAKTURA' : (isInvoice ? 'FAKTURA' : 'A-ORDER')
+    const titleColor = isCredit ? '#DC2626' : '#22C55E'
     const subject = `${docType} ${orderNumber} — ${customerAddress}`
 
     const htmlBody = `
-<h2 style="color: #22C55E; margin-bottom: 4px;">${docType} ${orderNumber}</h2>
+<h2 style="color: ${titleColor}; margin-bottom: 4px;">${docType} ${orderNumber}</h2>
 <p style="font-size: 18px; margin-top: 0;"><strong>${customerAddress}</strong></p>
 <hr style="border: none; border-top: 1px solid #ddd; margin: 16px 0;" />
 <p><strong>Kund:</strong> ${customerName || '—'}<br/><strong>Telefon:</strong> ${customerPhone || '—'}</p>
@@ -93,7 +95,7 @@ ${description ? `<p><strong>Beskrivning:</strong><br/>${description.replace(/\n/
     }
 
     // CC daniel@malke.se on all invoice emails
-    if (isInvoice) {
+    if (isInvoice || isCredit) {
       emailPayload.cc = ['daniel@malke.se']
     }
 
