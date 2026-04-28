@@ -37,7 +37,7 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   const headerBg = [55, 65, 81] as const;
 
   const isCredit = !!data.isCredit;
-  const accent = isCredit ? red : green;
+  const accent: readonly [number, number, number] = isCredit ? red : green;
   const sign = isCredit ? -1 : 1;
   const titleText = isCredit ? 'KREDITFAKTURA' : 'FAKTURA';
 
