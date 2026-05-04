@@ -26,7 +26,8 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
     sum: l.sum,
   }));
 
-  const { error } = await supabase.from('orders').upsert(
+  console.log('[saveOrder] Saving order #', params.orderNumber);
+  const { data, error } = await supabase.from('orders').upsert(
     {
       order_number: params.orderNumber,
       date: params.date,
@@ -48,11 +49,13 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       status: 'order',
     } as any,
     { onConflict: 'order_number', ignoreDuplicates: false }
-  );
+  ).select();
 
   if (error) {
-    console.error('Failed to save order:', error);
+    console.error('[saveOrder] Failed to save order:', error);
     throw error;
   }
+  console.log('[saveOrder] Saved successfully:', data);
+  return data;
 }
 

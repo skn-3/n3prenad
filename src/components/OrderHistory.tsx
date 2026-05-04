@@ -57,7 +57,7 @@ export default function OrderHistory() {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .order('order_number', { ascending: false });
+      .order('created_at', { ascending: false });
     if (error) {
       toast.error('Kunde inte hämta ordrar');
       console.error(error);
@@ -385,7 +385,7 @@ export default function OrderHistory() {
                 <tbody>
                   {orders.map(order => (
                     <tr key={order.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2 font-medium">#{order.order_number}</td>
+                      <td className="p-2 font-medium">{order.order_number ? `#${order.order_number}` : '—'}</td>
                       <td className="p-2">{order.date}</td>
                       <td className="p-2">{order.customer_address}</td>
                       <td className="p-2">{order.team_company}</td>
