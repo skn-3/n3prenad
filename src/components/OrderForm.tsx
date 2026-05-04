@@ -244,8 +244,10 @@ export default function OrderForm() {
         description,
         totalAmount: totalSum,
       });
-    } catch (err) {
+      toast.success(`Order #${usedOrderNumber} sparad i historiken`);
+    } catch (err: any) {
       console.error('Could not save order to DB:', err);
+      toast.error(`Kunde inte spara order i historiken: ${err.message || 'Okänt fel'}`);
     }
   };
 
@@ -335,8 +337,10 @@ export default function OrderForm() {
           description,
           totalAmount: totalSum,
         });
-      } catch (saveErr) {
+        toast.success(`Order #${usedOrderNumber} sparad i historiken`);
+      } catch (saveErr: any) {
         console.error('Could not save order to DB:', saveErr);
+        toast.error(`Kunde inte spara order i historiken: ${saveErr.message || 'Okänt fel'}`);
       }
     } catch (err: any) {
       console.error('Send email error:', err);
