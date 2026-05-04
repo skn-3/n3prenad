@@ -26,8 +26,16 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
     sum: l.sum,
   }));
 
-  const { error } = await supabase.from('orders').upsert(
-    {
+  console.log('[saveOrder] Saving order #', params.orderNumber);
+
+  // Check if an order with this order_number already exists (update vs insert)
+  const { data: existing } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('order_number', params.orderNumber)
+    .maybeSingle();
+
+  const payload = {
       order_number: params.orderNumber,
       date: params.date,
       customer_address: params.customerAddress,
@@ -46,13 +54,17 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       description: params.description,
       total_amount: params.totalAmount,
       status: 'order',
-    } as any,
-    { onConflict: 'order_number', ignoreDuplicates: false }
-  );
+  } as any;
+
+  const { data, error } = existing
+    ? await supabase.from('orders').update(payload).eq('id', existing.id).select()
+    : await supabase.from('orders').insert(payload).select();
 
   if (error) {
-    console.error('Failed to save order:', error);
+    console.error('[saveOrder] Failed to save order:', error);
     throw error;
   }
+  console.log('[saveOrder] Saved successfully:', data);
+  return data;
 }
 
