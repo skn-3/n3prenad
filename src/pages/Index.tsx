@@ -4,9 +4,36 @@ import OrderForm from '@/components/OrderForm';
 import ProductCatalog from '@/components/ProductCatalog';
 import TeamManager from '@/components/TeamManager';
 import OrderHistory from '@/components/OrderHistory';
-import { FileText, Package, Users, History } from 'lucide-react';
+import CaseQueue from '@/components/CaseQueue';
+import { FileText, Package, Users, History, ClipboardList } from 'lucide-react';
+
+interface Prefill {
+  address?: string;
+  name?: string;
+  phone?: string;
+  teamId?: string;
+  caseId?: string;
+  nonce?: number;
+}
 
 const Index = () => {
+  const [tab, setTab] = useState<string>('order');
+  const [prefill, setPrefill] = useState<Prefill>({});
+
+  const handleCreateOrderFromCase = (c: any) => {
+    const teamRaw: string = (c.team || '').trim();
+    const teamId = teamRaw ? teamRaw.split(' ')[0].toLowerCase() : '';
+    setPrefill({
+      address: c.address || '',
+      name: c.customer_name || '',
+      phone: c.customer_phone || '',
+      teamId,
+      caseId: c.id,
+      nonce: Date.now(),
+    });
+    setTab('order');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -24,11 +51,15 @@ const Index = () => {
 
       {/* Main */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        <Tabs defaultValue="order" className="w-full">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="order" className="gap-2">
               <FileText className="h-4 w-4" />
               Ny order
+            </TabsTrigger>
+            <TabsTrigger value="cases" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Ärenden
             </TabsTrigger>
             <TabsTrigger value="products" className="gap-2">
               <Package className="h-4 w-4" />
@@ -45,7 +76,20 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="order">
-            <OrderForm />
+            <OrderForm
+              prefillAddress={prefill.address}
+              prefillName={prefill.name}
+              prefillPhone={prefill.phone}
+              prefillTeamId={prefill.teamId}
+              prefillCaseId={prefill.caseId}
+              prefillNonce={prefill.nonce}
+            />
+          </TabsContent>
+          <TabsContent value="cases">
+            <CaseQueue
+              onCreateOrder={handleCreateOrderFromCase}
+              onGoToInvoicing={() => setTab('history')}
+            />
           </TabsContent>
           <TabsContent value="products">
             <ProductCatalog />

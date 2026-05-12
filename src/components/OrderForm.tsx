@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,7 +65,23 @@ function compressImage(file: File, maxWidth = 1200, quality = 0.75): Promise<{ b
   });
 }
 
-export default function OrderForm() {
+interface OrderFormProps {
+  prefillAddress?: string;
+  prefillName?: string;
+  prefillPhone?: string;
+  prefillTeamId?: string;
+  prefillCaseId?: string;
+  prefillNonce?: number;
+}
+
+export default function OrderForm({
+  prefillAddress,
+  prefillName,
+  prefillPhone,
+  prefillTeamId,
+  prefillCaseId,
+  prefillNonce,
+}: OrderFormProps = {}) {
   const { products } = useProducts();
   const { teams } = useTeams();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -85,7 +101,19 @@ export default function OrderForm() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [caseId, setCaseId] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply prefill when nonce changes (re-trigger on each "Skapa A-ORDER" click)
+  useEffect(() => {
+    if (!prefillNonce) return;
+    if (prefillAddress !== undefined) setCustomerAddress(prefillAddress);
+    if (prefillName !== undefined) setCustomerName(prefillName);
+    if (prefillPhone !== undefined) setCustomerPhone(prefillPhone);
+    if (prefillTeamId) setTeamId(prefillTeamId);
+    if (prefillCaseId) setCaseId(prefillCaseId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillNonce]);
 
   // Accessories
   const accessories = useMemo(() => products.filter(p =>
@@ -243,6 +271,7 @@ export default function OrderForm() {
         lines: allLines,
         description,
         totalAmount: totalSum,
+        case_id: caseId,
       });
       toast.success(`Order #${usedOrderNumber} sparad i historiken`);
     } catch (err: any) {
@@ -336,6 +365,7 @@ export default function OrderForm() {
           lines: allLines,
           description,
           totalAmount: totalSum,
+          case_id: caseId,
         });
         toast.success(`Order #${usedOrderNumber} sparad i historiken`);
       } catch (saveErr: any) {
@@ -368,6 +398,7 @@ export default function OrderForm() {
     images.forEach(img => URL.revokeObjectURL(img.preview));
     setImages([]);
     setPdfDownloaded(false);
+    setCaseId(undefined);
     toast.info('Formuläret nollställt');
   };
 
