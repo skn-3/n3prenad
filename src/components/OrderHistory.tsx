@@ -177,6 +177,28 @@ export default function OrderHistory() {
       .eq('id', order.id);
     if (error) console.error('Update error:', error);
     incrementTeamInvoiceCounter(order);
+
+    // Sync status to caseflow database
+    if ((order as any).case_id) {
+      try {
+        await caseflowDb
+          .from('cases')
+          .update({ status: 'fakturerad' })
+          .eq('id', (order as any).case_id);
+
+        await caseflowDb
+          .from('case_events')
+          .insert({
+            case_id: (order as any).case_id,
+            event_type: 'status_change',
+            description: 'Fakturerad automatiskt (faktura skickad från A-ORDER)',
+            created_by: 'System',
+          });
+      } catch (err) {
+        console.error('Could not sync status to caseflow:', err);
+      }
+    }
+
     fetchOrders();
   };
 
