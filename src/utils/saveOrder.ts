@@ -16,6 +16,7 @@ interface SaveOrderParams {
   lines: OrderLine[];
   description: string;
   totalAmount: number;
+  case_id?: string;
 }
 
 export async function saveOrderToSupabase(params: SaveOrderParams) {
@@ -54,6 +55,7 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       description: params.description,
       total_amount: params.totalAmount,
       status: 'order',
+      case_id: params.case_id || null,
   } as any;
 
   const { data, error } = existing
