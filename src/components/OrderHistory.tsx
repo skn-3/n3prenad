@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { useTeams } from '@/components/TeamManager';
