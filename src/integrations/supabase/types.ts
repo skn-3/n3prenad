@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       orders: {
         Row: {
+          case_id: string | null
           created_at: string
           credited_from_order_id: string | null
           customer_address: string
@@ -41,6 +42,7 @@ export type Database = {
           windows_count: number
         }
         Insert: {
+          case_id?: string | null
           created_at?: string
           credited_from_order_id?: string | null
           customer_address: string
@@ -66,6 +68,7 @@ export type Database = {
           windows_count?: number
         }
         Update: {
+          case_id?: string | null
           created_at?: string
           credited_from_order_id?: string | null
           customer_address?: string
