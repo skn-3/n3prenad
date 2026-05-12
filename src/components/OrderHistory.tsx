@@ -488,6 +488,13 @@ export default function OrderHistory() {
           <div className="px-6 pt-6 pb-3" style={{ flexShrink: 0 }}>
             <DialogTitle>Konvertera till faktura — #{invoiceOrder?.order_number}</DialogTitle>
             <p className="text-sm text-muted-foreground mt-2">Justera antal vid behov innan du genererar faktura-PDF.</p>
+            {caseCostsCount > 0 && (
+              <div className="mt-3">
+                <Badge variant="secondary" className="gap-1">
+                  📋 {caseCostsCount} montörkostnad{caseCostsCount === 1 ? '' : 'er'} hämtade från ärendet
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Scrollable body */}
