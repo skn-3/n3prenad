@@ -177,6 +177,28 @@ export default function OrderHistory() {
       .eq('id', order.id);
     if (error) console.error('Update error:', error);
     incrementTeamInvoiceCounter(order);
+
+    // Sync status to caseflow database
+    if ((order as any).case_id) {
+      try {
+        await caseflowDb
+          .from('cases')
+          .update({ status: 'fakturerad' })
+          .eq('id', (order as any).case_id);
+
+        await caseflowDb
+          .from('case_events')
+          .insert({
+            case_id: (order as any).case_id,
+            event_type: 'status_change',
+            description: 'Fakturerad automatiskt (faktura skickad från A-ORDER)',
+            created_by: 'System',
+          });
+      } catch (err) {
+        console.error('Could not sync status to caseflow:', err);
+      }
+    }
+
     fetchOrders();
   };
 
@@ -328,6 +350,27 @@ export default function OrderHistory() {
         .update({ status: 'credited' } as any)
         .eq('id', order.id);
       if (updErr) throw updErr;
+
+      // 3b. Sync status back to caseflow (revert to montage_klart)
+      if ((order as any).case_id) {
+        try {
+          await caseflowDb
+            .from('cases')
+            .update({ status: 'montage_klart' })
+            .eq('id', (order as any).case_id);
+
+          await caseflowDb
+            .from('case_events')
+            .insert({
+              case_id: (order as any).case_id,
+              event_type: 'status_change',
+              description: 'Status återställd till Montage klart (faktura krediterad)',
+              created_by: 'System',
+            });
+        } catch (err) {
+          console.error('Could not sync credit status to caseflow:', err);
+        }
+      }
 
       // 4. Save PDF to disk
       pdf.save(`KREDITFAKTURA-${creditNumber}.pdf`);
