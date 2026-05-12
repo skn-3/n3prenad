@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { useTeams } from '@/components/TeamManager';
@@ -42,6 +43,7 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [invoiceOrder, setInvoiceOrder] = useState<OrderRow | null>(null);
   const [invoiceLines, setInvoiceLines] = useState<any[]>([]);
+  const [caseCostsCount, setCaseCostsCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pendingPdf, setPendingPdf] = useState<any>(null);
@@ -98,9 +100,35 @@ export default function OrderHistory() {
     pdf.save(`A-ORDER-${order.order_number}.pdf`);
   };
 
-  const openInvoiceDialog = (order: OrderRow) => {
+  const openInvoiceDialog = async (order: OrderRow) => {
     setInvoiceOrder(order);
-    setInvoiceLines((order.line_items as any[]).map(l => ({ ...l })));
+    const originalLines = (order.line_items as any[]).map(l => ({ ...l }));
+
+    if ((order as any).case_id) {
+      try {
+        const { data: costs } = await caseflowDb
+          .from('case_costs')
+          .select('*')
+          .eq('case_id', (order as any).case_id);
+
+        const costLines = (costs || []).map((c: any) => ({
+          name: `Montörkostnad: ${c.description}`,
+          unit_price: c.amount,
+          quantity: 1,
+          sum: Math.round(c.amount),
+        }));
+
+        setInvoiceLines([...originalLines, ...costLines]);
+        setCaseCostsCount(costLines.length);
+      } catch (err) {
+        console.error('Could not fetch case costs:', err);
+        setInvoiceLines(originalLines);
+        setCaseCostsCount(0);
+      }
+    } else {
+      setInvoiceLines(originalLines);
+      setCaseCostsCount(0);
+    }
   };
 
   const updateInvoiceLineQty = (idx: number, qty: number) => {
@@ -460,6 +488,13 @@ export default function OrderHistory() {
           <div className="px-6 pt-6 pb-3" style={{ flexShrink: 0 }}>
             <DialogTitle>Konvertera till faktura — #{invoiceOrder?.order_number}</DialogTitle>
             <p className="text-sm text-muted-foreground mt-2">Justera antal vid behov innan du genererar faktura-PDF.</p>
+            {caseCostsCount > 0 && (
+              <div className="mt-3">
+                <Badge variant="secondary" className="gap-1">
+                  📋 {caseCostsCount} montörkostnad{caseCostsCount === 1 ? '' : 'er'} hämtade från ärendet
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Scrollable body */}
