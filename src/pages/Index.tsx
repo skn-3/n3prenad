@@ -5,7 +5,8 @@ import ProductCatalog from '@/components/ProductCatalog';
 import TeamManager from '@/components/TeamManager';
 import OrderHistory from '@/components/OrderHistory';
 import CaseQueue from '@/components/CaseQueue';
-import { FileText, Package, Users, History, ClipboardList } from 'lucide-react';
+import ImportPdfInvoice from '@/components/ImportPdfInvoice';
+import { FileText, Package, Users, History, ClipboardList, FileUp } from 'lucide-react';
 
 interface Prefill {
   address?: string;
@@ -73,6 +74,10 @@ const Index = () => {
               <History className="h-4 w-4" />
               Orderhistorik
             </TabsTrigger>
+            <TabsTrigger value="import" className="gap-2">
+              <FileUp className="h-4 w-4" />
+              Importera PDF
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="order">
@@ -99,6 +104,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="history">
             <OrderHistory />
+          </TabsContent>
+          <TabsContent value="import">
+            <ImportPdfInvoice />
           </TabsContent>
         </Tabs>
       </main>
