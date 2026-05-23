@@ -31,7 +31,10 @@ type Action =
   | 'check_duplicate'
   | 'link_case'
   | 'unlink_case'
-  | 'list_by_case_ids';
+  | 'list_by_case_ids'
+  | 'list_unlinked'
+  | 'get_by_case_id'
+  | 'update_date';
 
 interface Body {
   action: Action;
@@ -47,6 +50,8 @@ interface Body {
   order_id?: string;
   case_id?: string | null;
   case_ids?: string[];
+  known_case_ids?: string[];
+  date?: string;
 }
 
 function applyFilters(q: any, filters?: Record<string, unknown>) {
@@ -200,6 +205,55 @@ Deno.serve(async (req) => {
           .from('orders')
           .select('*')
           .in('case_id', body.case_ids);
+        if (error) throw error;
+        return json({ data });
+      }
+
+      case 'list_unlinked': {
+        // Returnera orders där case_id IS NULL ELLER case_id pekar på ett
+        // case som inte längre finns (orphans). Eftersom cases-tabellen
+        // ligger i ett annat Supabase-projekt (caseflow) skickar klienten
+        // med listan över kända case_ids; allt utanför den listan är orphans.
+        const known = Array.isArray(body.known_case_ids) ? body.known_case_ids : null;
+        let q = admin.from('orders').select('*');
+        if (known && known.length > 0) {
+          // case_id is null OR case_id not in known
+          // PostgREST: or=(case_id.is.null,case_id.not.in.(a,b,c))
+          const inList = known.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
+          q = q.or(`case_id.is.null,case_id.not.in.(${inList})`);
+        } else {
+          // ingen känd lista → returnera bara de utan case_id
+          q = q.is('case_id', null);
+        }
+        q = q.order('created_at', { ascending: false });
+        if (body.limit) q = q.limit(body.limit);
+        const { data, error } = await q;
+        if (error) throw error;
+        return json({ data });
+      }
+
+      case 'get_by_case_id': {
+        if (!body.case_id) return json({ error: 'case_id required' }, 400);
+        const { data, error } = await admin
+          .from('orders')
+          .select('*')
+          .eq('case_id', body.case_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        return json({ data });
+      }
+
+      case 'update_date': {
+        if (!body.order_id || !body.date)
+          return json({ error: 'order_id and date required' }, 400);
+        const { data, error } = await admin
+          .from('orders')
+          .update({ date: body.date })
+          .eq('id', body.order_id)
+          .select()
+          .single();
         if (error) throw error;
         return json({ data });
       }
