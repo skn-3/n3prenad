@@ -23,6 +23,7 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           date: string
+          delivery_time: string | null
           description: string
           distance_km: number
           doors_count: number
@@ -32,6 +33,7 @@ export type Database = {
           invoice_sent_at: string | null
           line_items: Json
           order_number: number | null
+          scheduled_delivery: boolean
           status: string
           team_bankgiro: string
           team_company: string
@@ -49,6 +51,7 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           date: string
+          delivery_time?: string | null
           description?: string
           distance_km?: number
           doors_count?: number
@@ -58,6 +61,7 @@ export type Database = {
           invoice_sent_at?: string | null
           line_items?: Json
           order_number?: number | null
+          scheduled_delivery?: boolean
           status?: string
           team_bankgiro: string
           team_company: string
@@ -75,6 +79,7 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           date?: string
+          delivery_time?: string | null
           description?: string
           distance_km?: number
           doors_count?: number
@@ -84,6 +89,7 @@ export type Database = {
           invoice_sent_at?: string | null
           line_items?: Json
           order_number?: number | null
+          scheduled_delivery?: boolean
           status?: string
           team_bankgiro?: string
           team_company?: string
