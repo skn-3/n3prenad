@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { OrderLine, FacadeType } from '@/types/order';
 import { useTeams } from '@/components/TeamManager';
@@ -102,6 +103,8 @@ export default function OrderForm({
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [caseId, setCaseId] = useState<string | undefined>(undefined);
+  const [scheduledDelivery, setScheduledDelivery] = useState(false);
+  const [deliveryTime, setDeliveryTime] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Apply prefill when nonce changes (re-trigger on each "Skapa A-ORDER" click)
@@ -272,6 +275,8 @@ export default function OrderForm({
         description,
         totalAmount: totalSum,
         case_id: caseId,
+        scheduledDelivery,
+        deliveryTime: deliveryTime || null,
       });
       toast.success(`Order #${usedOrderNumber} sparad i historiken`);
     } catch (err: any) {
@@ -366,6 +371,8 @@ export default function OrderForm({
           description,
           totalAmount: totalSum,
           case_id: caseId,
+        scheduledDelivery,
+        deliveryTime: deliveryTime || null,
         });
         toast.success(`Order #${usedOrderNumber} sparad i historiken`);
       } catch (saveErr: any) {
@@ -399,6 +406,8 @@ export default function OrderForm({
     setImages([]);
     setPdfDownloaded(false);
     setCaseId(undefined);
+    setScheduledDelivery(false);
+    setDeliveryTime('');
     toast.info('Formuläret nollställt');
   };
 
@@ -446,6 +455,34 @@ export default function OrderForm({
               value={customerPhone}
               onChange={e => setCustomerPhone(e.target.value)}
             />
+          </div>
+          <div className="md:col-span-3 border-t pt-4 mt-2">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={scheduledDelivery}
+                  onCheckedChange={(c) => setScheduledDelivery(c === true)}
+                />
+                <span className="font-medium">Tidsstyrd leverans (tidslossning)</span>
+              </label>
+              {scheduledDelivery && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="delivery-time" className="text-sm whitespace-nowrap">
+                    Tid (valfritt — sätts veckan innan)
+                  </Label>
+                  <Input
+                    id="delivery-time"
+                    type="time"
+                    value={deliveryTime}
+                    onChange={(e) => setDeliveryTime(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Markera om leveransen kräver exakt lossningstid. Tiden kan anges senare.
+            </p>
           </div>
         </CardContent>
       </Card>
