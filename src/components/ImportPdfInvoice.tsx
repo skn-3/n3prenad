@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileUp, Loader2, CheckCircle2, AlertCircle, Trash2, Pencil, Save } from 'lucide-react';
+import { FileUp, Loader2, CheckCircle2, AlertCircle, Trash2, Pencil, Save, Link2, Link2Off, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { defaultTeams } from '@/data/teams';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 type LineItem = { name: string; unit_price: number; quantity: number; sum: number };
 type ParsedInvoice = {
@@ -22,6 +25,8 @@ type ParsedInvoice = {
   line_items: LineItem[];
 };
 type Status = 'pending' | 'parsing' | 'ready' | 'saving' | 'saved' | 'error' | 'duplicate';
+type MatchConfidence = 'exact' | 'street' | null;
+type MatchedCase = { id: string; address: string; customer_name: string | null; status: string | null };
 type FileItem = {
   id: string;
   file: File;
@@ -30,6 +35,10 @@ type FileItem = {
   parsed?: ParsedInvoice;
   editing?: boolean;
   duplicateId?: string;
+  matchedCaseId?: string | null;
+  matchedCase?: MatchedCase | null;
+  matchConfidence?: MatchConfidence;
+  matching?: boolean;
 };
 
 function mapTeamPrefix(prefix: string): string {
@@ -58,6 +67,50 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function normalizeAddress(addr: string): string {
+  if (!addr) return '';
+  return addr
+    .toLowerCase()
+    .replace(/\b\d{3}\s?\d{2}\b/g, '') // postnummer
+    .replace(/[,;]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function streetPart(addr: string): string {
+  // gatuadress före komma
+  const before = (addr || '').split(',')[0];
+  return normalizeAddress(before);
+}
+
+async function findMatchingCase(
+  address: string,
+): Promise<{ case: MatchedCase | null; confidence: MatchConfidence }> {
+  const street = streetPart(address);
+  if (!street) return { case: null, confidence: null };
+  try {
+    const { data: cases, error } = await caseflowDb
+      .from('cases')
+      .select('id, address, customer_name, status')
+      .ilike('address', `%${street}%`)
+      .limit(20);
+    if (error) throw error;
+    if (!cases || cases.length === 0) return { case: null, confidence: null };
+
+    const normInvoice = normalizeAddress(address);
+    const exact = cases.find((c: any) => normalizeAddress(c.address) === normInvoice);
+    if (exact) return { case: exact as MatchedCase, confidence: 'exact' };
+
+    const streetMatch = cases.find((c: any) => streetPart(c.address) === street);
+    if (streetMatch) return { case: streetMatch as MatchedCase, confidence: 'street' };
+
+    return { case: cases[0] as MatchedCase, confidence: 'street' };
+  } catch (e) {
+    console.warn('[findMatchingCase] caseflow lookup failed:', e);
+    return { case: null, confidence: null };
+  }
+}
+
 const StatusBadge = ({ status }: { status: Status }) => {
   const map: Record<Status, { label: string; cls: string; icon?: any }> = {
     pending: { label: 'Väntar', cls: 'bg-muted text-muted-foreground' },
@@ -81,6 +134,23 @@ const StatusBadge = ({ status }: { status: Status }) => {
 const ImportPdfInvoice = () => {
   const [items, setItems] = useState<FileItem[]>([]);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
+  const [allCases, setAllCases] = useState<MatchedCase[]>([]);
+  const [casesLoaded, setCasesLoaded] = useState(false);
+
+  const ensureAllCasesLoaded = async () => {
+    if (casesLoaded) return;
+    try {
+      const { data } = await caseflowDb
+        .from('cases')
+        .select('id, address, customer_name, status')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      setAllCases((data || []) as MatchedCase[]);
+      setCasesLoaded(true);
+    } catch (e) {
+      console.warn('Could not load cases list:', e);
+    }
+  };
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
     const arr = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
@@ -123,6 +193,16 @@ const ImportPdfInvoice = () => {
       } else {
         updateItem(id, { status: 'ready', parsed });
       }
+
+      // Auto-match mot caseflow
+      updateItem(id, { matching: true });
+      const match = await findMatchingCase(parsed.customer_address);
+      updateItem(id, {
+        matching: false,
+        matchedCaseId: match.case?.id ?? null,
+        matchedCase: match.case,
+        matchConfidence: match.confidence,
+      });
     } catch (e: any) {
       console.error('parseFile error:', e);
       updateItem(id, { status: 'error', error: e?.message || 'Okänt fel' });
@@ -170,7 +250,8 @@ const ImportPdfInvoice = () => {
         invoice_sent_at: new Date().toISOString(),
         description: '',
         facade_type: 'tra',
-      });
+        case_id: it.matchedCaseId || null,
+      } as any);
       if (error) throw error;
       updateItem(id, { status: 'saved' });
       toast.success(`Faktura ${p.invoice_number} importerad!`);
@@ -189,15 +270,36 @@ const ImportPdfInvoice = () => {
       toast.info('Inga filer redo att importera');
       return;
     }
+    // Säkerställ att matchning hunnit klart för alla
+    for (const it of toImport) {
+      if (it.matching) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+      if (it.matchedCaseId === undefined) {
+        const match = await findMatchingCase(it.parsed!.customer_address);
+        updateItem(it.id, {
+          matchedCaseId: match.case?.id ?? null,
+          matchedCase: match.case,
+          matchConfidence: match.confidence,
+        });
+      }
+    }
     setBatchProgress({ current: 0, total: toImport.length });
     let done = 0;
+    let linked = 0;
+    let unlinked = 0;
     for (const it of toImport) {
-      await saveItem(it.id);
+      const ok = await saveItem(it.id);
+      if (ok) {
+        const current = items.find(i => i.id === it.id);
+        if (current?.matchedCaseId || it.matchedCaseId) linked++;
+        else unlinked++;
+      }
       done++;
       setBatchProgress({ current: done, total: toImport.length });
     }
     setBatchProgress(null);
-    toast.success(`${done} av ${toImport.length} importerade`);
+    toast.success(`${done} importerade · ${linked} kopplade till ärende · ${unlinked} utan koppling`);
   };
 
   const updateParsedField = (id: string, field: keyof ParsedInvoice, value: any) => {
@@ -364,6 +466,48 @@ const ImportPdfInvoice = () => {
                       <div>{it.parsed.recipient_company} <span className="text-muted-foreground">({it.parsed.recipient_org_nr})</span></div>
                     )}
                   </div>
+                  <div className="col-span-2">
+                    {it.matching ? (
+                      <div className="p-2 rounded bg-muted text-sm flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Söker matchande ärende...
+                      </div>
+                    ) : it.matchedCase ? (
+                      <div className="p-2 rounded bg-green-500/10 border border-green-500/30 text-sm flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Link2 className="h-4 w-4 text-green-700 shrink-0" />
+                          <span className="truncate">
+                            Kopplas till ärende: <strong>{it.matchedCase.address}</strong>
+                            {it.matchedCase.customer_name && <span className="text-muted-foreground"> ({it.matchedCase.customer_name})</span>}
+                          </span>
+                          <Badge variant="secondary" className={it.matchConfidence === 'exact' ? 'bg-green-500/20 text-green-800' : 'bg-amber-500/20 text-amber-800'}>
+                            {it.matchConfidence === 'exact' ? 'Hög' : 'Medel'}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <CaseSearchPopover
+                            cases={allCases}
+                            onOpen={ensureAllCasesLoaded}
+                            onSelect={(c) => updateItem(it.id, { matchedCaseId: c.id, matchedCase: c, matchConfidence: 'exact' })}
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => updateItem(it.id, { matchedCaseId: null, matchedCase: null, matchConfidence: null })}>
+                            <Link2Off className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded bg-amber-500/10 border border-amber-500/30 text-sm flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-700" />
+                          Inget matchande ärende hittat — ordern skapas utan koppling
+                        </span>
+                        <CaseSearchPopover
+                          cases={allCases}
+                          onOpen={ensureAllCasesLoaded}
+                          onSelect={(c) => updateItem(it.id, { matchedCaseId: c.id, matchedCase: c, matchConfidence: 'exact' })}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Table>
@@ -416,3 +560,46 @@ const ImportPdfInvoice = () => {
 };
 
 export default ImportPdfInvoice;
+
+function CaseSearchPopover({
+  cases,
+  onOpen,
+  onSelect,
+}: {
+  cases: MatchedCase[];
+  onOpen: () => void;
+  onSelect: (c: MatchedCase) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) onOpen(); }}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1">
+          <Search className="h-3 w-3" /> Sök ärende
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[420px] p-0" align="end">
+        <Command>
+          <CommandInput placeholder="Sök på adress eller kund..." />
+          <CommandList>
+            <CommandEmpty>Inga ärenden hittade</CommandEmpty>
+            <CommandGroup>
+              {cases.map(c => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.address} ${c.customer_name || ''}`}
+                  onSelect={() => { onSelect(c); setOpen(false); }}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{c.address}</span>
+                    {c.customer_name && <span className="text-xs text-muted-foreground">{c.customer_name}</span>}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
