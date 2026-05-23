@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { OrderLine, FacadeType, Team } from '@/types/order';
 
 interface SaveOrderParams {
@@ -17,6 +18,8 @@ interface SaveOrderParams {
   description: string;
   totalAmount: number;
   case_id?: string;
+  scheduledDelivery?: boolean;
+  deliveryTime?: string | null;
 }
 
 export async function saveOrderToSupabase(params: SaveOrderParams) {
@@ -56,6 +59,8 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       total_amount: params.totalAmount,
       status: 'order',
       case_id: params.case_id || null,
+      scheduled_delivery: !!params.scheduledDelivery,
+      delivery_time: params.deliveryTime || null,
   } as any;
 
   const { data, error } = existing
@@ -67,6 +72,22 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
     throw error;
   }
   console.log('[saveOrder] Saved successfully:', data);
+
+  // Cross-DB sync: keep caseflow case in sync with delivery scheduling flag
+  if (params.case_id) {
+    try {
+      await caseflowDb
+        .from('cases')
+        .update({
+          scheduled_delivery: !!params.scheduledDelivery,
+          delivery_time: params.deliveryTime || null,
+        } as any)
+        .eq('id', params.case_id);
+    } catch (err) {
+      console.warn('[saveOrder] Could not sync scheduled_delivery to caseflow:', err);
+    }
+  }
+
   return data;
 }
 
