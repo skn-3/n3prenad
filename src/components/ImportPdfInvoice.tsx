@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileUp, Loader2, CheckCircle2, AlertCircle, Trash2, Pencil, Save, Link2, Link2Off, Search } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { caseflowDb } from '@/integrations/supabase/caseflowClient';
+import { supabase } from '@/integrations/supabase/client';
+import { checkDuplicate, insertOrder } from '@/utils/ordersGateway';
 import { defaultTeams } from '@/data/teams';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -182,13 +183,9 @@ const ImportPdfInvoice = () => {
       if (!parsed) throw new Error('Ingen data returnerades');
 
       // duplicate check
-      const { data: existing } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('invoice_number', parsed.invoice_number)
-        .maybeSingle();
+      const existing = await checkDuplicate({ invoice_number: parsed.invoice_number });
 
-      if (existing) {
+      if (existing.exists && existing.id) {
         updateItem(id, { status: 'duplicate', parsed, duplicateId: existing.id });
       } else {
         updateItem(id, { status: 'ready', parsed });
@@ -216,12 +213,8 @@ const ImportPdfInvoice = () => {
     try {
       const p = it.parsed;
       if (!force) {
-        const { data: existing } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('invoice_number', p.invoice_number)
-          .maybeSingle();
-        if (existing) {
+        const existing = await checkDuplicate({ invoice_number: p.invoice_number });
+        if (existing.exists && existing.id) {
           updateItem(id, { status: 'duplicate', duplicateId: existing.id });
           return false;
         }
@@ -233,7 +226,7 @@ const ImportPdfInvoice = () => {
 
       const orderNumber = extractOrderNumber(p.invoice_number);
 
-      const { error } = await supabase.from('orders').insert({
+      await insertOrder({
         order_number: orderNumber,
         date: p.date,
         customer_address: p.customer_address,
@@ -251,8 +244,7 @@ const ImportPdfInvoice = () => {
         description: '',
         facade_type: 'tra',
         case_id: it.matchedCaseId || null,
-      } as any);
-      if (error) throw error;
+      });
       updateItem(id, { status: 'saved' });
       toast.success(`Faktura ${p.invoice_number} importerad!`);
       return true;
