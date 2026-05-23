@@ -560,3 +560,46 @@ const ImportPdfInvoice = () => {
 };
 
 export default ImportPdfInvoice;
+
+function CaseSearchPopover({
+  cases,
+  onOpen,
+  onSelect,
+}: {
+  cases: MatchedCase[];
+  onOpen: () => void;
+  onSelect: (c: MatchedCase) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) onOpen(); }}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1">
+          <Search className="h-3 w-3" /> Sök ärende
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[420px] p-0" align="end">
+        <Command>
+          <CommandInput placeholder="Sök på adress eller kund..." />
+          <CommandList>
+            <CommandEmpty>Inga ärenden hittade</CommandEmpty>
+            <CommandGroup>
+              {cases.map(c => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.address} ${c.customer_name || ''}`}
+                  onSelect={() => { onSelect(c); setOpen(false); }}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{c.address}</span>
+                    {c.customer_name && <span className="text-xs text-muted-foreground">{c.customer_name}</span>}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
