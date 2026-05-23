@@ -3,14 +3,15 @@
  *
  * Steg 1/3: bara byggd och testbar. Inga befintliga komponenter använder den ännu.
  *
- * VARNING: VITE_ORDERS_GATEWAY_SECRET bakas in i frontend-bundeln och är därför
+ * VARNING: ORDERS_GATEWAY_SECRET bakas in i frontend-bundeln och är därför
  * läsbar för alla som öppnar appen. Den här gatewayen ger ingen reell säkerhet
  * förrän vi i steg 2/3 byter till riktig auth eller origin-check.
  */
 
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/orders-gateway`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-const GATEWAY_SECRET = (import.meta.env.VITE_ORDERS_GATEWAY_SECRET as string) || '';
+const GATEWAY_SECRET =
+  ((import.meta.env.VITE_ORDERS_GATEWAY_SECRET || import.meta.env.ORDERS_GATEWAY_SECRET) as string) || '';
 
 type Filters = Record<
   string,
@@ -31,7 +32,7 @@ interface CallBody {
 async function call<T = unknown>(body: CallBody): Promise<T> {
   if (!GATEWAY_SECRET) {
     throw new Error(
-      'VITE_ORDERS_GATEWAY_SECRET saknas i miljövariabler — gatewayen kan inte anropas.',
+      'ORDERS_GATEWAY_SECRET saknas i miljövariabler — gatewayen kan inte anropas.',
     );
   }
   const res = await fetch(FUNCTION_URL, {
