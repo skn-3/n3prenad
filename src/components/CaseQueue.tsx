@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { caseflowDb } from '@/integrations/supabase/caseflowClient';
-import { supabase } from '@/integrations/supabase/client';
+import { listOrders } from '@/utils/ordersGateway';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,12 +67,10 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
   const { data: linkedOrders = [] } = useQuery({
     queryKey: ['linked-orders'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('case_id, status, total_amount, customer_address')
-        .not('case_id', 'is', null);
-      if (error) throw error;
-      return data || [];
+      const data = await listOrders({
+        filters: { case_id: { is_null: false } },
+      });
+      return data;
     },
   });
 

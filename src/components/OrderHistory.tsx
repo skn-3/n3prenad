@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import { caseflowDb } from '@/integrations/supabase/caseflowClient';
+import { supabase } from '@/integrations/supabase/client';
+import { listOrders, insertOrder, updateOrder } from '@/utils/ordersGateway';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { useTeams } from '@/components/TeamManager';
@@ -56,15 +57,12 @@ export default function OrderHistory() {
 
   const fetchOrders = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) {
+    try {
+      const data = await listOrders({ order_by: { column: 'created_at', ascending: false } });
+      setOrders(data.map((d: any) => ({ ...d, line_items: d.line_items as any[] })));
+    } catch (error) {
       toast.error('Kunde inte hämta ordrar');
       console.error(error);
-    } else {
-      setOrders((data || []).map((d: any) => ({ ...d, line_items: d.line_items as any[] })));
     }
     setLoading(false);
   };
@@ -165,17 +163,17 @@ export default function OrderHistory() {
 
   const finishInvoice = async (order: OrderRow, invoiceNumber: string) => {
     const newTotal = invoiceLines.reduce((s: number, l: any) => s + l.sum, 0);
-    const { error } = await supabase
-      .from('orders')
-      .update({
+    try {
+      await updateOrder(order.id, {
         status: 'invoiced',
         invoice_sent_at: new Date().toISOString(),
         line_items: invoiceLines,
         total_amount: newTotal,
         invoice_number: invoiceNumber,
-      } as any)
-      .eq('id', order.id);
-    if (error) console.error('Update error:', error);
+      });
+    } catch (error) {
+      console.error('Update error:', error);
+    }
     incrementTeamInvoiceCounter(order);
 
     // Sync status to caseflow database
@@ -320,8 +318,8 @@ export default function OrderHistory() {
         unit_price: -Math.abs(l.unit_price),
         sum: -Math.abs(l.sum),
       }));
-      const { error: insertErr } = await supabase.from('orders').insert({
-        order_number: null as any,
+      await insertOrder({
+        order_number: null,
         date: today,
         customer_address: order.customer_address,
         customer_name: order.customer_name,
@@ -341,15 +339,10 @@ export default function OrderHistory() {
         status: 'credited',
         invoice_number: creditNumber,
         credited_from_order_id: order.id,
-      } as any);
-      if (insertErr) throw insertErr;
+      });
 
       // 3. Mark original as credited
-      const { error: updErr } = await supabase
-        .from('orders')
-        .update({ status: 'credited' } as any)
-        .eq('id', order.id);
-      if (updErr) throw updErr;
+      await updateOrder(order.id, { status: 'credited' });
 
       // 3b. Sync status back to caseflow (revert to montage_klart)
       if ((order as any).case_id) {

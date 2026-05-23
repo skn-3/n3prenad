@@ -1,6 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';
 import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { OrderLine, FacadeType, Team } from '@/types/order';
+import { checkDuplicate, insertOrder, updateOrder } from '@/utils/ordersGateway';
 
 interface SaveOrderParams {
   orderNumber: number;
@@ -33,11 +33,7 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
   console.log('[saveOrder] Saving order #', params.orderNumber);
 
   // Check if an order with this order_number already exists (update vs insert)
-  const { data: existing } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('order_number', params.orderNumber)
-    .maybeSingle();
+  const existing = await checkDuplicate({ order_number: params.orderNumber });
 
   const payload = {
       order_number: params.orderNumber,
@@ -61,13 +57,14 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       case_id: params.case_id || null,
       scheduled_delivery: !!params.scheduledDelivery,
       delivery_time: params.deliveryTime || null,
-  } as any;
+  } as Record<string, unknown>;
 
-  const { data, error } = existing
-    ? await supabase.from('orders').update(payload).eq('id', existing.id).select()
-    : await supabase.from('orders').insert(payload).select();
-
-  if (error) {
+  let data;
+  try {
+    data = existing.exists && existing.id
+      ? await updateOrder(existing.id, payload)
+      : await insertOrder(payload);
+  } catch (error) {
     console.error('[saveOrder] Failed to save order:', error);
     throw error;
   }
