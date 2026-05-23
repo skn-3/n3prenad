@@ -6,7 +6,8 @@ import TeamManager from '@/components/TeamManager';
 import OrderHistory from '@/components/OrderHistory';
 import CaseQueue from '@/components/CaseQueue';
 import ImportPdfInvoice from '@/components/ImportPdfInvoice';
-import { FileText, Package, Users, History, ClipboardList, FileUp } from 'lucide-react';
+import OrdersGatewayTest from '@/components/OrdersGatewayTest';
+import { FileText, Package, Users, History, ClipboardList, FileUp, ShieldCheck } from 'lucide-react';
 
 interface Prefill {
   address?: string;
@@ -78,6 +79,10 @@ const Index = () => {
               <FileUp className="h-4 w-4" />
               Importera PDF
             </TabsTrigger>
+            <TabsTrigger value="gateway-test" className="gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Gateway-test
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="order">
@@ -107,6 +112,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="import">
             <ImportPdfInvoice />
+          </TabsContent>
+          <TabsContent value="gateway-test">
+            <OrdersGatewayTest />
           </TabsContent>
         </Tabs>
       </main>
