@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Allow all access" ON public.orders;
