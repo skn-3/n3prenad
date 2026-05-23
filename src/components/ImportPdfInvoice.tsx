@@ -466,6 +466,48 @@ const ImportPdfInvoice = () => {
                       <div>{it.parsed.recipient_company} <span className="text-muted-foreground">({it.parsed.recipient_org_nr})</span></div>
                     )}
                   </div>
+                  <div className="col-span-2">
+                    {it.matching ? (
+                      <div className="p-2 rounded bg-muted text-sm flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Söker matchande ärende...
+                      </div>
+                    ) : it.matchedCase ? (
+                      <div className="p-2 rounded bg-green-500/10 border border-green-500/30 text-sm flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Link2 className="h-4 w-4 text-green-700 shrink-0" />
+                          <span className="truncate">
+                            Kopplas till ärende: <strong>{it.matchedCase.address}</strong>
+                            {it.matchedCase.customer_name && <span className="text-muted-foreground"> ({it.matchedCase.customer_name})</span>}
+                          </span>
+                          <Badge variant="secondary" className={it.matchConfidence === 'exact' ? 'bg-green-500/20 text-green-800' : 'bg-amber-500/20 text-amber-800'}>
+                            {it.matchConfidence === 'exact' ? 'Hög' : 'Medel'}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <CaseSearchPopover
+                            cases={allCases}
+                            onOpen={ensureAllCasesLoaded}
+                            onSelect={(c) => updateItem(it.id, { matchedCaseId: c.id, matchedCase: c, matchConfidence: 'exact' })}
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => updateItem(it.id, { matchedCaseId: null, matchedCase: null, matchConfidence: null })}>
+                            <Link2Off className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded bg-amber-500/10 border border-amber-500/30 text-sm flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-700" />
+                          Inget matchande ärende hittat — ordern skapas utan koppling
+                        </span>
+                        <CaseSearchPopover
+                          cases={allCases}
+                          onOpen={ensureAllCasesLoaded}
+                          onSelect={(c) => updateItem(it.id, { matchedCaseId: c.id, matchedCase: c, matchConfidence: 'exact' })}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Table>
