@@ -11,7 +11,8 @@
 const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/orders-gateway`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const GATEWAY_SECRET =
-  ((import.meta.env.VITE_ORDERS_GATEWAY_SECRET || import.meta.env.ORDERS_GATEWAY_SECRET) as string) || '';
+  ((import.meta.env.VITE_ORDERS_GATEWAY_SECRET || import.meta.env.ORDERS_GATEWAY_SECRET) as string) ||
+  'k7Hn2pQ9rTfW4mXz8vBcL3dY6sJgN5aErU0iKoP1wMqZxVt';
 
 type Filters = Record<
   string,
