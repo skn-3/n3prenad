@@ -6,6 +6,7 @@ import { Team } from '@/types/order';
 import { defaultTeams } from '@/data/teams';
 import { Plus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 
 const STORAGE_KEY = 'smartklimat-teams';
 
@@ -24,6 +25,17 @@ export function useTeams() {
 
 export default function TeamManager() {
   const { teams, setTeams } = useTeams();
+
+  // Hitta dubblerade fakturaprefix (case-insensitive, ignorera tomma)
+  const prefixCounts = teams.reduce<Record<string, number>>((acc, t) => {
+    const p = (t.invoicePrefix || '').trim().toUpperCase();
+    if (!p) return acc;
+    acc[p] = (acc[p] || 0) + 1;
+    return acc;
+  }, {});
+  const duplicatePrefixes = Object.entries(prefixCounts)
+    .filter(([, n]) => n > 1)
+    .map(([p]) => p);
 
   const updateField = (id: string, field: keyof Team, value: string | boolean | number) => {
     setTeams(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
@@ -61,6 +73,17 @@ export default function TeamManager() {
           <Plus className="h-4 w-4 mr-1" /> Lägg till team
         </Button>
       </div>
+
+      {duplicatePrefixes.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <strong>Dubblerat fakturaprefix:</strong>{' '}
+            {duplicatePrefixes.join(', ')}. Varje team måste ha ett unikt prefix,
+            annars hamnar fakturanummer på fel team.
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
@@ -104,7 +127,17 @@ export default function TeamManager() {
                     <Input className="h-8 text-sm w-28" value={team.bankgiro} onChange={e => updateField(team.id, 'bankgiro', e.target.value)} />
                   </td>
                   <td className="p-2">
-                    <Input className="h-8 text-sm w-24" placeholder="GVMO" value={team.invoicePrefix || ''} onChange={e => updateField(team.id, 'invoicePrefix', e.target.value.toUpperCase())} />
+                    <Input
+                      className={`h-8 text-sm w-24 ${
+                        team.invoicePrefix &&
+                        duplicatePrefixes.includes(team.invoicePrefix.trim().toUpperCase())
+                          ? 'border-destructive focus-visible:ring-destructive'
+                          : ''
+                      }`}
+                      placeholder="GVMO"
+                      value={team.invoicePrefix || ''}
+                      onChange={e => updateField(team.id, 'invoicePrefix', e.target.value.toUpperCase())}
+                    />
                   </td>
                   <td className="p-2">
                     <Input className="h-8 text-sm w-20" type="number" min={1} value={team.nextInvoiceNumber ?? 1} onChange={e => updateField(team.id, 'nextInvoiceNumber', Math.max(1, Number(e.target.value)))} />
