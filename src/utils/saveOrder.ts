@@ -57,6 +57,10 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       case_id: params.case_id || null,
       scheduled_delivery: !!params.scheduledDelivery,
       delivery_time: params.deliveryTime || null,
+      // Nollställ ev. gammalt fakturanummer när ordern (åter)sparas som "order"
+      // så att team-byte inte ärver fel prefix från tidigare fakturering.
+      invoice_number: null,
+      invoice_sent_at: null,
   } as Record<string, unknown>;
 
   let data;
