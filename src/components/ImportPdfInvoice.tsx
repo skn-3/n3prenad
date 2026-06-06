@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileUp, Loader2, CheckCircle2, AlertCircle, Trash2, Pencil, Save, Link2, Link2Off, Search } from 'lucide-react';
-import { caseflowDb } from '@/integrations/supabase/caseflowClient';
+import { cfSelect } from '@/utils/caseflowGateway';
 import { supabase } from '@/integrations/supabase/client';
 import { checkDuplicate, insertOrder } from '@/utils/ordersGateway';
 import { defaultTeams } from '@/data/teams';
@@ -90,12 +90,11 @@ async function findMatchingCase(
   const street = streetPart(address);
   if (!street) return { case: null, confidence: null };
   try {
-    const { data: cases, error } = await caseflowDb
-      .from('cases')
-      .select('id, address, customer_name, status')
-      .ilike('address', `%${street}%`)
-      .limit(20);
-    if (error) throw error;
+    const cases = await cfSelect<MatchedCase>('cases', {
+      columns: 'id, address, customer_name, status',
+      filters: { address: { ilike: `%${street}%` } },
+      limit: 20,
+    });
     if (!cases || cases.length === 0) return { case: null, confidence: null };
 
     const normInvoice = normalizeAddress(address);
@@ -141,12 +140,12 @@ const ImportPdfInvoice = () => {
   const ensureAllCasesLoaded = async () => {
     if (casesLoaded) return;
     try {
-      const { data } = await caseflowDb
-        .from('cases')
-        .select('id, address, customer_name, status')
-        .order('created_at', { ascending: false })
-        .limit(500);
-      setAllCases((data || []) as MatchedCase[]);
+      const data = await cfSelect<MatchedCase>('cases', {
+        columns: 'id, address, customer_name, status',
+        order_by: { column: 'created_at', ascending: false },
+        limit: 500,
+      });
+      setAllCases(data);
       setCasesLoaded(true);
     } catch (e) {
       console.warn('Could not load cases list:', e);
