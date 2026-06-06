@@ -1,6 +1,6 @@
-import { caseflowDb } from '@/integrations/supabase/caseflowClient';
 import { OrderLine, FacadeType, Team } from '@/types/order';
 import { checkDuplicate, insertOrder, updateOrder } from '@/utils/ordersGateway';
+import { cfUpdateCase } from '@/utils/caseflowGateway';
 
 interface SaveOrderParams {
   orderNumber: number;
@@ -77,13 +77,10 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
   // Cross-DB sync: keep caseflow case in sync with delivery scheduling flag
   if (params.case_id) {
     try {
-      await caseflowDb
-        .from('cases')
-        .update({
-          scheduled_delivery: !!params.scheduledDelivery,
-          delivery_time: params.deliveryTime || null,
-        } as any)
-        .eq('id', params.case_id);
+      await cfUpdateCase(params.case_id, {
+        scheduled_delivery: !!params.scheduledDelivery,
+        delivery_time: params.deliveryTime || null,
+      });
     } catch (err) {
       console.warn('[saveOrder] Could not sync scheduled_delivery to caseflow:', err);
     }

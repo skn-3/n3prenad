@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { caseflowDb } from '@/integrations/supabase/caseflowClient';
+import { cfSelect } from '@/utils/caseflowGateway';
 import { listOrders } from '@/utils/ordersGateway';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,26 +41,22 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
   const { data: orderCases = [], isLoading: loadingOrder } = useQuery({
     queryKey: ['caseflow-cases', 'order-ready'],
     queryFn: async () => {
-      const { data, error } = await caseflowDb
-        .from('cases')
-        .select('*')
-        .in('status', ['km_klar', 'montage_bokat', 'leverans_klar'])
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as CaseRow[];
+      const data = await cfSelect<CaseRow>('cases', {
+        filters: { status: { in: ['km_klar', 'montage_bokat', 'leverans_klar'] } },
+        order_by: { column: 'created_at', ascending: false },
+      });
+      return data;
     },
   });
 
   const { data: invoiceCases = [], isLoading: loadingInvoice } = useQuery({
     queryKey: ['caseflow-cases', 'invoice-ready'],
     queryFn: async () => {
-      const { data, error } = await caseflowDb
-        .from('cases')
-        .select('*')
-        .eq('status', 'montage_klart')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as CaseRow[];
+      const data = await cfSelect<CaseRow>('cases', {
+        filters: { status: 'montage_klart' },
+        order_by: { column: 'created_at', ascending: false },
+      });
+      return data;
     },
   });
 
