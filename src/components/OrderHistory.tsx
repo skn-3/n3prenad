@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { caseflowDb } from '@/integrations/supabase/caseflowClient';
+import { cfSelect, cfUpdateCase, cfInsertCaseEvent } from '@/utils/caseflowGateway';
 import { supabase } from '@/integrations/supabase/client';
 import { listOrders, insertOrder, updateOrder } from '@/utils/ordersGateway';
 import { generateOrderPDF } from '@/utils/pdfGenerator';
@@ -104,10 +104,9 @@ export default function OrderHistory() {
 
     if ((order as any).case_id) {
       try {
-        const { data: costs } = await caseflowDb
-          .from('case_costs')
-          .select('*')
-          .eq('case_id', (order as any).case_id);
+        const costs = await cfSelect<any>('case_costs', {
+          filters: { case_id: (order as any).case_id },
+        });
 
         const costLines = (costs || []).map((c: any) => ({
           name: `Montörkostnad: ${c.description}`,
@@ -179,19 +178,14 @@ export default function OrderHistory() {
     // Sync status to caseflow database
     if ((order as any).case_id) {
       try {
-        await caseflowDb
-          .from('cases')
-          .update({ status: 'fakturerad' })
-          .eq('id', (order as any).case_id);
+        await cfUpdateCase((order as any).case_id, { status: 'fakturerad' });
 
-        await caseflowDb
-          .from('case_events')
-          .insert({
-            case_id: (order as any).case_id,
-            event_type: 'status_change',
-            description: 'Fakturerad automatiskt (faktura skickad från A-ORDER)',
-            created_by: 'System',
-          });
+        await cfInsertCaseEvent({
+          case_id: (order as any).case_id,
+          event_type: 'status_change',
+          description: 'Fakturerad automatiskt (faktura skickad från A-ORDER)',
+          created_by: 'System',
+        });
       } catch (err) {
         console.error('Could not sync status to caseflow:', err);
       }
@@ -347,19 +341,14 @@ export default function OrderHistory() {
       // 3b. Sync status back to caseflow (revert to montage_klart)
       if ((order as any).case_id) {
         try {
-          await caseflowDb
-            .from('cases')
-            .update({ status: 'montage_klart' })
-            .eq('id', (order as any).case_id);
+          await cfUpdateCase((order as any).case_id, { status: 'montage_klart' });
 
-          await caseflowDb
-            .from('case_events')
-            .insert({
-              case_id: (order as any).case_id,
-              event_type: 'status_change',
-              description: 'Status återställd till Montage klart (faktura krediterad)',
-              created_by: 'System',
-            });
+          await cfInsertCaseEvent({
+            case_id: (order as any).case_id,
+            event_type: 'status_change',
+            description: 'Status återställd till Montage klart (faktura krediterad)',
+            created_by: 'System',
+          });
         } catch (err) {
           console.error('Could not sync credit status to caseflow:', err);
         }
