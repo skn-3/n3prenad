@@ -12,7 +12,7 @@ const FUNCTION_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supaba
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const GATEWAY_SECRET =
   ((import.meta.env.VITE_ORDERS_GATEWAY_SECRET || import.meta.env.ORDERS_GATEWAY_SECRET) as string) ||
-  'k7Hn2pQ9rTfW4mXz8vBcL3dY6sJgN5aErU0iKoP1wMqZxVt';
+  'AAxj8w111sj28Jsskao28dAKAKSqCE338xwn937c7fvtr4';
 
 type Filters = Record<
   string,
