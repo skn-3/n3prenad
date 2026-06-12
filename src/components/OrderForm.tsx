@@ -105,6 +105,9 @@ export default function OrderForm({
   const [caseId, setCaseId] = useState<string | undefined>(undefined);
   const [scheduledDelivery, setScheduledDelivery] = useState(false);
   const [deliveryTime, setDeliveryTime] = useState<string>('');
+  const [internalExtraHours, setInternalExtraHours] = useState(0);
+  const [internalHourRate, setInternalHourRate] = useState(0);
+  const [internalExtraAmount, setInternalExtraAmount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Apply prefill when nonce changes (re-trigger on each "Skapa A-ORDER" click)
@@ -153,6 +156,9 @@ export default function OrderForm({
 
   const allLines = [...autoLines, ...accessoryLines, ...manualLines];
   const totalSum = allLines.reduce((s, l) => s + l.sum, 0);
+  const internalValue = Math.round(
+    internalExtraHours * internalHourRate + internalExtraAmount,
+  );
   const totalUnits = windowCount + doorCount + roofWindowCount;
   const selectedTeam = teams.find(t => t.id === teamId);
 
@@ -277,6 +283,9 @@ export default function OrderForm({
         case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
       });
       toast.success(`Order #${usedOrderNumber} sparad i historiken`);
     } catch (err: any) {
@@ -316,6 +325,9 @@ export default function OrderForm({
         case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
       });
       toast.success(`Order #${usedOrderNumber} sparad som utestående`);
       setPdfDownloaded(true);
@@ -407,6 +419,9 @@ export default function OrderForm({
           case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
         });
         toast.success(`Order #${usedOrderNumber} sparad i historiken`);
       } catch (saveErr: any) {
@@ -442,6 +457,9 @@ export default function OrderForm({
     setCaseId(undefined);
     setScheduledDelivery(false);
     setDeliveryTime('');
+    setInternalExtraHours(0);
+    setInternalHourRate(0);
+    setInternalExtraAmount(0);
     toast.info('Formuläret nollställt');
   };
 
