@@ -291,6 +291,40 @@ export default function OrderForm({
     setShowSendDialog(true);
   };
 
+  const saveAsOutstanding = async () => {
+    if (!customerAddress) { toast.error('Ange kundadress'); return; }
+    const usedOrderNumber = orderNumber;
+    if (usedOrderNumber === peekOrderNumber()) {
+      getNextOrderNumber();
+    }
+    try {
+      await saveOrderToSupabase({
+        orderNumber: usedOrderNumber,
+        date,
+        customerAddress,
+        customerName,
+        customerPhone,
+        facadeType,
+        windowCount,
+        doorCount,
+        teamId: undefined,
+        team: null,
+        kmDistance,
+        lines: allLines,
+        description,
+        totalAmount: totalSum,
+        case_id: caseId,
+        scheduledDelivery,
+        deliveryTime: deliveryTime || null,
+      });
+      toast.success(`Order #${usedOrderNumber} sparad som utestående`);
+      setPdfDownloaded(true);
+    } catch (err: any) {
+      console.error('Could not save outstanding order:', err);
+      toast.error(`Kunde inte spara order: ${err.message || 'Okänt fel'}`);
+    }
+  };
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
