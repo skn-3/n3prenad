@@ -38,6 +38,16 @@ export default function OutstandingOrders() {
     () => orders.reduce((s, o) => s + (o.total_amount || 0), 0),
     [orders],
   );
+  const internalTotal = useMemo(
+    () => orders.reduce((s, o) => {
+      const h = Number((o as any).internal_extra_hours || 0);
+      const r = Number((o as any).internal_hour_rate || 0);
+      const a = Number((o as any).internal_extra_amount || 0);
+      return s + Math.round(h * r + a);
+    }, 0),
+    [orders],
+  );
+  const grandTotal = totalValue + internalTotal;
 
   const openAssign = (order: OrderRow) => {
     setAssignOrder(order);
@@ -72,12 +82,16 @@ export default function OutstandingOrders() {
     <div className="space-y-4">
       <Card>
         <CardContent className="py-6">
-          <p className="text-sm text-muted-foreground mb-1">Utestående montagevärde</p>
+          <p className="text-sm text-muted-foreground mb-1">Utestående totalt</p>
           <p className="text-3xl font-bold text-primary">
-            {totalValue.toLocaleString('sv-SE')} kr
+            {grandTotal.toLocaleString('sv-SE')} kr
             <span className="text-base font-normal text-muted-foreground ml-3">
               · {orders.length} {orders.length === 1 ? 'order' : 'ordrar'}
             </span>
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            varav montörsvärde {totalValue.toLocaleString('sv-SE')} kr · internt{' '}
+            {internalTotal.toLocaleString('sv-SE')} kr
           </p>
         </CardContent>
       </Card>
@@ -108,13 +122,20 @@ export default function OutstandingOrders() {
                     <th className="text-left p-2">Kund</th>
                     <th className="text-left p-2">Adress</th>
                     <th className="text-right p-2">Enheter</th>
-                    <th className="text-right p-2">Värde</th>
+                    <th className="text-right p-2">Montörsvärde</th>
+                    <th className="text-right p-2">Internt</th>
+                    <th className="text-right p-2">Totalt</th>
                     <th className="text-right p-2">Åtgärd</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map(o => {
                     const units = (o.windows_count || 0) + (o.doors_count || 0) + ((o as any).roof_windows_count || 0);
+                    const h = Number((o as any).internal_extra_hours || 0);
+                    const r = Number((o as any).internal_hour_rate || 0);
+                    const a = Number((o as any).internal_extra_amount || 0);
+                    const internal = Math.round(h * r + a);
+                    const rowTotal = (o.total_amount || 0) + internal;
                     return (
                       <tr key={o.id} className="border-b hover:bg-muted/50">
                         <td className="p-2 font-medium">{o.order_number ? `#${o.order_number}` : '—'}</td>
@@ -123,6 +144,8 @@ export default function OutstandingOrders() {
                         <td className="p-2">{o.customer_address}</td>
                         <td className="p-2 text-right">{units}</td>
                         <td className="p-2 text-right">{(o.total_amount || 0).toLocaleString('sv-SE')} kr</td>
+                        <td className="p-2 text-right">{internal.toLocaleString('sv-SE')} kr</td>
+                        <td className="p-2 text-right font-medium">{rowTotal.toLocaleString('sv-SE')} kr</td>
                         <td className="p-2 text-right">
                           <Button size="sm" variant="outline" className="gap-1" onClick={() => openAssign(o)}>
                             <UserPlus className="h-3.5 w-3.5" /> Tilldela montör
