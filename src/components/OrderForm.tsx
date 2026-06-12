@@ -569,11 +569,12 @@ export default function OrderForm({
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Montör</Label>
-            <Select value={teamId} onValueChange={setTeamId}>
+            <Select value={teamId || '__unassigned__'} onValueChange={(v) => setTeamId(v === '__unassigned__' ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Välj montör..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__unassigned__">— Ej tilldelad (utestående) —</SelectItem>
                 {teams.filter(t => t.isActive).map(team => (
                   <SelectItem key={team.id} value={team.id}>
                     {team.name} — {team.companyName}
@@ -581,6 +582,11 @@ export default function OrderForm({
                 ))}
               </SelectContent>
             </Select>
+            {!teamId && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Tilldela montör senare för att kunna skicka A-ordern.
+              </p>
+            )}
           </div>
           <div>
             <Label>Avstånd enkel väg (km)</Label>
