@@ -30,6 +30,9 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   montage_bokat: { label: 'Montage bokat', className: 'bg-yellow-500 text-black hover:bg-yellow-500' },
   leverans_klar: { label: 'Leverans klar', className: 'bg-green-500 text-white hover:bg-green-500' },
   montage_klart: { label: 'Montage klart', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
+  vantar_godkannande: { label: 'Väntar godkännande', className: 'bg-gray-400 text-white hover:bg-gray-400' },
+  godkand: { label: 'Godkänd', className: 'bg-blue-500 text-white hover:bg-blue-500' },
+  i_produktion: { label: 'I produktion', className: 'bg-indigo-500 text-white hover:bg-indigo-500' },
 };
 
 function formatSEK(n: number | null) {
@@ -60,6 +63,17 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
     },
   });
 
+  const { data: upcomingCases = [], isLoading: loadingUpcoming } = useQuery({
+    queryKey: ['caseflow-cases', 'upcoming'],
+    queryFn: async () => {
+      const data = await cfSelect<CaseRow>('cases', {
+        filters: { status: { in: ['vantar_godkannande', 'godkand', 'i_produktion'] } },
+        order_by: { column: 'created_at', ascending: false },
+      });
+      return data;
+    },
+  });
+
   const { data: linkedOrders = [] } = useQuery({
     queryKey: ['linked-orders'],
     queryFn: async () => {
@@ -72,6 +86,7 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
 
   const linkedIds = new Set(linkedOrders.map((o: any) => o.case_id));
   const readyForOrder = orderCases.filter(c => !linkedIds.has(c.id));
+  const upcomingUnbooked = upcomingCases.filter(c => !linkedIds.has(c.id));
 
   // For invoicing: case has status montage_klart AND a matching order with status='order'
   const orderByCaseId = new Map<string, any>();
@@ -128,6 +143,47 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Kommande montage (ej bokade)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {loadingUpcoming ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" /> Hämtar ärenden...
+            </div>
+          ) : upcomingUnbooked.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">
+              Inga kommande ärenden.
+              <p className="text-xs mt-1">Ärenden med status Väntar godkännande, Godkänd eller I produktion visas här.</p>
+            </div>
+          ) : (
+            upcomingUnbooked.map(c => {
+              const sb = c.status ? statusBadge[c.status] : undefined;
+              return (
+                <div
+                  key={c.id}
+                  className="flex flex-col md:flex-row md:items-center justify-between gap-3 border rounded-lg p-4 hover:bg-accent/40 transition"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate">{c.address || '(adress saknas)'}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {c.customer_name}{c.customer_phone ? ` · ${c.customer_phone}` : ''}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {c.team && <Badge variant="outline">{c.team}</Badge>}
+                      {sb && <Badge className={sb.className}>{sb.label}</Badge>}
+                      {c.order_value ? <span className="text-xs text-muted-foreground">{formatSEK(c.order_value)}</span> : null}
+                    </div>
+                  </div>
+                  <Button onClick={() => onCreateOrder(c)} variant="outline" className="gap-2 shrink-0">
+                    Skapa utestående A-ORDER <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
         <CardHeader>
           <CardTitle className="text-lg">Redo att fakturera</CardTitle>
         </CardHeader>
