@@ -20,6 +20,9 @@ interface SaveOrderParams {
   case_id?: string;
   scheduledDelivery?: boolean;
   deliveryTime?: string | null;
+  internalExtraHours?: number;
+  internalHourRate?: number;
+  internalExtraAmount?: number;
 }
 
 export async function saveOrderToSupabase(params: SaveOrderParams) {
@@ -57,6 +60,9 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       case_id: params.case_id || null,
       scheduled_delivery: !!params.scheduledDelivery,
       delivery_time: params.deliveryTime || null,
+      internal_extra_hours: params.internalExtraHours ?? 0,
+      internal_hour_rate: params.internalHourRate ?? 0,
+      internal_extra_amount: params.internalExtraAmount ?? 0,
       // Nollställ ev. gammalt fakturanummer när ordern (åter)sparas som "order"
       // så att team-byte inte ärver fel prefix från tidigare fakturering.
       invoice_number: null,

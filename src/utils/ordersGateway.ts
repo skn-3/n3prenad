@@ -79,6 +79,9 @@ export interface OrderRow {
   case_id: string | null;
   scheduled_delivery?: boolean;
   delivery_time?: string | null;
+  internal_extra_hours?: number;
+  internal_hour_rate?: number;
+  internal_extra_amount?: number;
   created_at: string;
 }
 

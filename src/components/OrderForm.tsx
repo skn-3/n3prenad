@@ -105,6 +105,9 @@ export default function OrderForm({
   const [caseId, setCaseId] = useState<string | undefined>(undefined);
   const [scheduledDelivery, setScheduledDelivery] = useState(false);
   const [deliveryTime, setDeliveryTime] = useState<string>('');
+  const [internalExtraHours, setInternalExtraHours] = useState(0);
+  const [internalHourRate, setInternalHourRate] = useState(0);
+  const [internalExtraAmount, setInternalExtraAmount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Apply prefill when nonce changes (re-trigger on each "Skapa A-ORDER" click)
@@ -153,6 +156,9 @@ export default function OrderForm({
 
   const allLines = [...autoLines, ...accessoryLines, ...manualLines];
   const totalSum = allLines.reduce((s, l) => s + l.sum, 0);
+  const internalValue = Math.round(
+    internalExtraHours * internalHourRate + internalExtraAmount,
+  );
   const totalUnits = windowCount + doorCount + roofWindowCount;
   const selectedTeam = teams.find(t => t.id === teamId);
 
@@ -277,6 +283,9 @@ export default function OrderForm({
         case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
       });
       toast.success(`Order #${usedOrderNumber} sparad i historiken`);
     } catch (err: any) {
@@ -316,6 +325,9 @@ export default function OrderForm({
         case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
       });
       toast.success(`Order #${usedOrderNumber} sparad som utestående`);
       setPdfDownloaded(true);
@@ -407,6 +419,9 @@ export default function OrderForm({
           case_id: caseId,
         scheduledDelivery,
         deliveryTime: deliveryTime || null,
+        internalExtraHours,
+        internalHourRate,
+        internalExtraAmount,
         });
         toast.success(`Order #${usedOrderNumber} sparad i historiken`);
       } catch (saveErr: any) {
@@ -442,6 +457,9 @@ export default function OrderForm({
     setCaseId(undefined);
     setScheduledDelivery(false);
     setDeliveryTime('');
+    setInternalExtraHours(0);
+    setInternalHourRate(0);
+    setInternalExtraAmount(0);
     toast.info('Formuläret nollställt');
   };
 
@@ -755,6 +773,51 @@ export default function OrderForm({
             onChange={e => setDescription(e.target.value)}
             rows={4}
           />
+        </CardContent>
+      </Card>
+
+      {/* Internt — visas EJ för montör */}
+      <Card className="border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20">
+        <CardHeader>
+          <CardTitle className="text-base text-amber-900 dark:text-amber-200">
+            Internt — visas EJ för montör
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>Extra timmar</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.25"
+                value={internalExtraHours || ''}
+                onChange={e => setInternalExtraHours(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Timpris (kr/h)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={internalHourRate || ''}
+                onChange={e => setInternalHourRate(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Extra belopp (kr)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={internalExtraAmount || ''}
+                onChange={e => setInternalExtraAmount(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <p className="text-sm text-amber-900/80 dark:text-amber-200/80">
+            Internt värde: {internalExtraHours || 0} × {internalHourRate || 0} + {internalExtraAmount || 0} ={' '}
+            <span className="font-semibold">{internalValue.toLocaleString('sv-SE')} kr</span>
+          </p>
         </CardContent>
       </Card>
 
