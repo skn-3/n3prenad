@@ -236,7 +236,7 @@ export default function OrderForm({
 
   const downloadPDF = async () => {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
-    if (!teamId) { toast.error('Välj montör'); return; }
+    if (!teamId) { toast.error('Tilldela montör först för att kunna generera PDF.'); return; }
 
     const usedOrderNumber = orderNumber;
     if (usedOrderNumber === peekOrderNumber()) {
@@ -287,8 +287,42 @@ export default function OrderForm({
 
   const handleSendToMontör = () => {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
-    if (!teamId) { toast.error('Välj montör'); return; }
+    if (!teamId) { toast.error('Tilldela montör först för att kunna skicka A-ordern.'); return; }
     setShowSendDialog(true);
+  };
+
+  const saveAsOutstanding = async () => {
+    if (!customerAddress) { toast.error('Ange kundadress'); return; }
+    const usedOrderNumber = orderNumber;
+    if (usedOrderNumber === peekOrderNumber()) {
+      getNextOrderNumber();
+    }
+    try {
+      await saveOrderToSupabase({
+        orderNumber: usedOrderNumber,
+        date,
+        customerAddress,
+        customerName,
+        customerPhone,
+        facadeType,
+        windowCount,
+        doorCount,
+        teamId: undefined,
+        team: null,
+        kmDistance,
+        lines: allLines,
+        description,
+        totalAmount: totalSum,
+        case_id: caseId,
+        scheduledDelivery,
+        deliveryTime: deliveryTime || null,
+      });
+      toast.success(`Order #${usedOrderNumber} sparad som utestående`);
+      setPdfDownloaded(true);
+    } catch (err: any) {
+      console.error('Could not save outstanding order:', err);
+      toast.error(`Kunde inte spara order: ${err.message || 'Okänt fel'}`);
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -535,11 +569,12 @@ export default function OrderForm({
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Montör</Label>
-            <Select value={teamId} onValueChange={setTeamId}>
+            <Select value={teamId || '__unassigned__'} onValueChange={(v) => setTeamId(v === '__unassigned__' ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Välj montör..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__unassigned__">— Ej tilldelad (utestående) —</SelectItem>
                 {teams.filter(t => t.isActive).map(team => (
                   <SelectItem key={team.id} value={team.id}>
                     {team.name} — {team.companyName}
@@ -547,6 +582,11 @@ export default function OrderForm({
                 ))}
               </SelectContent>
             </Select>
+            {!teamId && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Tilldela montör senare för att kunna skicka A-ordern.
+              </p>
+            )}
           </div>
           <div>
             <Label>Avstånd enkel väg (km)</Label>
@@ -799,19 +839,27 @@ export default function OrderForm({
                 <RefreshCw className="h-4 w-4" /> Ny order
               </Button>
             )}
-            <Button size="lg" onClick={downloadPDF} className="gap-2">
-              <Download className="h-5 w-5" /> Ladda ner PDF
-            </Button>
-            <Button
-              size="lg"
-              onClick={handleSendToMontör}
-              className="gap-2"
-              style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
-              disabled={attachmentsTooLarge}
-              title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
-            >
-              <Send className="h-5 w-5" /> Skicka till montör
-            </Button>
+            {!teamId ? (
+              <Button size="lg" onClick={saveAsOutstanding} className="gap-2">
+                <Download className="h-5 w-5" /> Spara som utestående
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" onClick={downloadPDF} className="gap-2">
+                  <Download className="h-5 w-5" /> Ladda ner PDF
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={handleSendToMontör}
+                  className="gap-2"
+                  style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
+                  disabled={attachmentsTooLarge}
+                  title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
+                >
+                  <Send className="h-5 w-5" /> Skicka till montör
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
