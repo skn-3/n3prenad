@@ -776,6 +776,51 @@ export default function OrderForm({
         </CardContent>
       </Card>
 
+      {/* Internt — visas EJ för montör */}
+      <Card className="border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20">
+        <CardHeader>
+          <CardTitle className="text-base text-amber-900 dark:text-amber-200">
+            Internt — visas EJ för montör
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>Extra timmar</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.25"
+                value={internalExtraHours || ''}
+                onChange={e => setInternalExtraHours(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Timpris (kr/h)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={internalHourRate || ''}
+                onChange={e => setInternalHourRate(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Extra belopp (kr)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={internalExtraAmount || ''}
+                onChange={e => setInternalExtraAmount(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <p className="text-sm text-amber-900/80 dark:text-amber-200/80">
+            Internt värde: {internalExtraHours || 0} × {internalHourRate || 0} + {internalExtraAmount || 0} ={' '}
+            <span className="font-semibold">{internalValue.toLocaleString('sv-SE')} kr</span>
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Steg 8: Bilder */}
       <Card>
         <CardHeader>
