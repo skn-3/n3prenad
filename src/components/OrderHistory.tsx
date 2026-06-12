@@ -436,7 +436,12 @@ export default function OrderHistory() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map(order => (
+                  {orders.map(order => {
+                    const h = Number((order as any).internal_extra_hours || 0);
+                    const r = Number((order as any).internal_hour_rate || 0);
+                    const a = Number((order as any).internal_extra_amount || 0);
+                    const internal = Math.round(h * r + a);
+                    return (
                     <tr key={order.id} className="border-b hover:bg-muted/50">
                       <td className="p-2 font-medium">{order.order_number ? `#${order.order_number}` : '—'}</td>
                       <td className="p-2">{order.date}</td>
@@ -446,7 +451,14 @@ export default function OrderHistory() {
                           <Badge className="bg-yellow-400 text-black hover:bg-yellow-400">Ej tilldelad</Badge>
                         )}
                       </td>
-                      <td className="p-2 text-right">{order.total_amount.toLocaleString('sv-SE')} kr</td>
+                      <td className="p-2 text-right">
+                        {order.total_amount.toLocaleString('sv-SE')} kr
+                        {internal > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Internt: {internal.toLocaleString('sv-SE')} kr
+                          </div>
+                        )}
+                      </td>
                       <td className="p-2 font-mono text-xs">{order.invoice_number || ''}</td>
                       <td className="p-2 text-center">
                         {order.status === 'credited' ? (
@@ -512,7 +524,8 @@ export default function OrderHistory() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
