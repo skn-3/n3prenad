@@ -6,7 +6,8 @@ import TeamManager from '@/components/TeamManager';
 import OrderHistory from '@/components/OrderHistory';
 import CaseQueue from '@/components/CaseQueue';
 import ImportPdfInvoice from '@/components/ImportPdfInvoice';
-import { FileText, Package, Users, History, ClipboardList, FileUp } from 'lucide-react';
+import OutstandingOrders from '@/components/OutstandingOrders';
+import { FileText, Package, Users, History, ClipboardList, FileUp, AlertCircle } from 'lucide-react';
 
 interface Prefill {
   address?: string;
@@ -62,6 +63,10 @@ const Index = () => {
               <ClipboardList className="h-4 w-4" />
               Ärenden
             </TabsTrigger>
+            <TabsTrigger value="outstanding" className="gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Utestående
+            </TabsTrigger>
             <TabsTrigger value="products" className="gap-2">
               <Package className="h-4 w-4" />
               Produktkatalog
@@ -95,6 +100,9 @@ const Index = () => {
               onCreateOrder={handleCreateOrderFromCase}
               onGoToInvoicing={() => setTab('history')}
             />
+          </TabsContent>
+          <TabsContent value="outstanding">
+            <OutstandingOrders />
           </TabsContent>
           <TabsContent value="products">
             <ProductCatalog />
