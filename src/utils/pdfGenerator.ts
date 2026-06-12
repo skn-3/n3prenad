@@ -4,6 +4,11 @@ import { companyInfo } from '@/data/companyInfo';
 import { Team } from '@/types/order';
 import { logoBase64 } from '@/assets/logoBase64';
 
+// SECURITY: internal_* fields (internal_extra_hours, internal_hour_rate,
+// internal_extra_amount) must never be rendered in this PDF — it is delivered
+// to the installer. Same rule applies to invoicePdfGenerator and the
+// send-order-email edge function.
+
 interface PDFData {
   date: string;
   orderNumber: number;
