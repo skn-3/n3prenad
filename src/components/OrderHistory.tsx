@@ -441,7 +441,11 @@ export default function OrderHistory() {
                       <td className="p-2 font-medium">{order.order_number ? `#${order.order_number}` : '—'}</td>
                       <td className="p-2">{order.date}</td>
                       <td className="p-2">{order.customer_address}</td>
-                      <td className="p-2">{order.team_company}</td>
+                      <td className="p-2">
+                        {order.team_company || (
+                          <Badge className="bg-yellow-400 text-black hover:bg-yellow-400">Ej tilldelad</Badge>
+                        )}
+                      </td>
                       <td className="p-2 text-right">{order.total_amount.toLocaleString('sv-SE')} kr</td>
                       <td className="p-2 font-mono text-xs">{order.invoice_number || ''}</td>
                       <td className="p-2 text-center">
@@ -455,11 +459,24 @@ export default function OrderHistory() {
                       </td>
                       <td className="p-2 text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => downloadOrderPDF(order)} title="Ladda ner A-ORDER PDF">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadOrderPDF(order)}
+                            disabled={!order.team_id}
+                            title={!order.team_id ? 'Tilldela montör först' : 'Ladda ner A-ORDER PDF'}
+                          >
                             <Download className="h-4 w-4" />
                           </Button>
                           {order.status === 'order' && (
-                            <Button variant="outline" size="sm" onClick={() => openInvoiceDialog(order)} className="gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openInvoiceDialog(order)}
+                              disabled={!order.team_id}
+                              title={!order.team_id ? 'Tilldela montör först' : undefined}
+                              className="gap-1"
+                            >
                               <FileText className="h-3.5 w-3.5" /> → Faktura
                             </Button>
                           )}
