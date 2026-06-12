@@ -1,0 +1,6 @@
+ALTER TABLE public.orders
+  ALTER COLUMN team_id DROP NOT NULL,
+  ALTER COLUMN team_company DROP NOT NULL,
+  ALTER COLUMN team_org_nr DROP NOT NULL,
+  ALTER COLUMN team_bankgiro DROP NOT NULL,
+  ALTER COLUMN team_email DROP NOT NULL;

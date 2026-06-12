@@ -35,11 +35,11 @@ export type Database = {
           order_number: number | null
           scheduled_delivery: boolean
           status: string
-          team_bankgiro: string
-          team_company: string
-          team_email: string
-          team_id: string
-          team_org_nr: string
+          team_bankgiro: string | null
+          team_company: string | null
+          team_email: string | null
+          team_id: string | null
+          team_org_nr: string | null
           total_amount: number
           windows_count: number
         }
@@ -63,11 +63,11 @@ export type Database = {
           order_number?: number | null
           scheduled_delivery?: boolean
           status?: string
-          team_bankgiro: string
-          team_company: string
-          team_email: string
-          team_id: string
-          team_org_nr: string
+          team_bankgiro?: string | null
+          team_company?: string | null
+          team_email?: string | null
+          team_id?: string | null
+          team_org_nr?: string | null
           total_amount?: number
           windows_count?: number
         }
@@ -91,11 +91,11 @@ export type Database = {
           order_number?: number | null
           scheduled_delivery?: boolean
           status?: string
-          team_bankgiro?: string
-          team_company?: string
-          team_email?: string
-          team_id?: string
-          team_org_nr?: string
+          team_bankgiro?: string | null
+          team_company?: string | null
+          team_email?: string | null
+          team_id?: string | null
+          team_org_nr?: string | null
           total_amount?: number
           windows_count?: number
         }
