@@ -839,19 +839,27 @@ export default function OrderForm({
                 <RefreshCw className="h-4 w-4" /> Ny order
               </Button>
             )}
-            <Button size="lg" onClick={downloadPDF} className="gap-2">
-              <Download className="h-5 w-5" /> Ladda ner PDF
-            </Button>
-            <Button
-              size="lg"
-              onClick={handleSendToMontör}
-              className="gap-2"
-              style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
-              disabled={attachmentsTooLarge}
-              title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
-            >
-              <Send className="h-5 w-5" /> Skicka till montör
-            </Button>
+            {!teamId ? (
+              <Button size="lg" onClick={saveAsOutstanding} className="gap-2">
+                <Download className="h-5 w-5" /> Spara som utestående
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" onClick={downloadPDF} className="gap-2">
+                  <Download className="h-5 w-5" /> Ladda ner PDF
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={handleSendToMontör}
+                  className="gap-2"
+                  style={{ backgroundColor: attachmentsTooLarge ? undefined : '#F97316' }}
+                  disabled={attachmentsTooLarge}
+                  title={attachmentsTooLarge ? 'Bilagorna är för stora — ta bort bilder först' : undefined}
+                >
+                  <Send className="h-5 w-5" /> Skicka till montör
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
