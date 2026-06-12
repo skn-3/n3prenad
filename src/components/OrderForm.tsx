@@ -236,7 +236,7 @@ export default function OrderForm({
 
   const downloadPDF = async () => {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
-    if (!teamId) { toast.error('Välj montör'); return; }
+    if (!teamId) { toast.error('Tilldela montör först för att kunna generera PDF.'); return; }
 
     const usedOrderNumber = orderNumber;
     if (usedOrderNumber === peekOrderNumber()) {
@@ -287,7 +287,7 @@ export default function OrderForm({
 
   const handleSendToMontör = () => {
     if (!customerAddress) { toast.error('Ange kundadress'); return; }
-    if (!teamId) { toast.error('Välj montör'); return; }
+    if (!teamId) { toast.error('Tilldela montör först för att kunna skicka A-ordern.'); return; }
     setShowSendDialog(true);
   };
 
