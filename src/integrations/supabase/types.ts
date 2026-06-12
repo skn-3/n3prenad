@@ -29,6 +29,9 @@ export type Database = {
           doors_count: number
           facade_type: string
           id: string
+          internal_extra_amount: number
+          internal_extra_hours: number
+          internal_hour_rate: number
           invoice_number: string | null
           invoice_sent_at: string | null
           line_items: Json
@@ -57,6 +60,9 @@ export type Database = {
           doors_count?: number
           facade_type?: string
           id?: string
+          internal_extra_amount?: number
+          internal_extra_hours?: number
+          internal_hour_rate?: number
           invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
@@ -85,6 +91,9 @@ export type Database = {
           doors_count?: number
           facade_type?: string
           id?: string
+          internal_extra_amount?: number
+          internal_extra_hours?: number
+          internal_hour_rate?: number
           invoice_number?: string | null
           invoice_sent_at?: string | null
           line_items?: Json
