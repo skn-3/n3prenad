@@ -11,8 +11,8 @@ interface SaveOrderParams {
   facadeType: FacadeType;
   windowCount: number;
   doorCount: number;
-  teamId: string;
-  team: Team;
+  teamId?: string;
+  team?: Team | null;
   kmDistance: number;
   lines: OrderLine[];
   description: string;
@@ -44,11 +44,11 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
       facade_type: params.facadeType,
       windows_count: params.windowCount,
       doors_count: params.doorCount,
-      team_id: params.teamId,
-      team_company: params.team.companyName,
-      team_org_nr: params.team.orgNr,
-      team_bankgiro: params.team.bankgiro,
-      team_email: params.team.email,
+      team_id: params.team ? params.teamId ?? null : null,
+      team_company: params.team ? params.team.companyName : null,
+      team_org_nr: params.team ? params.team.orgNr : null,
+      team_bankgiro: params.team ? params.team.bankgiro : null,
+      team_email: params.team ? params.team.email : null,
       distance_km: params.kmDistance,
       line_items: lineItems,
       description: params.description,
@@ -74,8 +74,10 @@ export async function saveOrderToSupabase(params: SaveOrderParams) {
   }
   console.log('[saveOrder] Saved successfully:', data);
 
-  // Cross-DB sync: keep caseflow case in sync with delivery scheduling flag
-  if (params.case_id) {
+  // Cross-DB sync: keep caseflow case in sync with delivery scheduling flag.
+  // Hoppa över för otilldelade ordrar — CaseFlow-status får inte ändras
+  // förrän en montör faktiskt tilldelats.
+  if (params.case_id && params.team) {
     try {
       await cfUpdateCase(params.case_id, {
         scheduled_delivery: !!params.scheduledDelivery,
