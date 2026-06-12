@@ -184,6 +184,8 @@ export default function CaseQueue({ onCreateOrder, onGoToInvoicing }: CaseQueueP
           )}
         </CardContent>
       </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Redo att fakturera</CardTitle>
         </CardHeader>
